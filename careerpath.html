@@ -2192,7 +2192,7 @@ Page content: ${pageText}`;
         } catch(err) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : "Could not extract — try pasting the text instead", "error");
+            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : err.message || "Could not extract — try pasting the text instead", "error");
         }
     }
 
@@ -2233,7 +2233,7 @@ ${text.slice(0, 3000)}`;
         } catch (err) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : "Could not parse — try again", "error");
+            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : err.message || "Could not parse — try again", "error");
         }
     }
 

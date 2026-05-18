@@ -1,4 +1,4 @@
-const CACHE = 'careerpath-v1';
+const CACHE = 'careerpath-v2';
 const SHELL = ['./careerpath.html', './manifest.json', './icon.svg', './icon-maskable.svg'];
 
 self.addEventListener('install', e => {

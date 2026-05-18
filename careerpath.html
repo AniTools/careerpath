@@ -992,6 +992,18 @@
     }
 
     // ─── GEMINI AI ────────────────────────────────────────────────────────────
+    function geminiErrorMessage(msg = '') {
+        if (msg.includes('API_KEY_INVALID') || msg.includes('API key not valid'))
+            return 'Your Google API key is invalid — double-check it in Settings.';
+        if (msg.includes('PERMISSION_DENIED'))
+            return 'API key denied — make sure the Generative Language API is enabled in Google Cloud.';
+        if (msg.includes('RESOURCE_EXHAUSTED') || msg.includes('quota'))
+            return 'You\'ve hit the free quota limit — wait a minute and try again.';
+        if (msg.includes('SAFETY'))
+            return 'The AI flagged this content — try rephrasing the job description.';
+        return msg || 'API error — check your connection and try again.';
+    }
+
     async function callGemini(prompt) {
         const key = getGoogleKey();
         if (!key) throw new Error('no-key');
@@ -1004,7 +1016,7 @@
             }
         );
         const data = await res.json();
-        if (data.error) throw new Error(data.error.message);
+        if (data.error) throw new Error(geminiErrorMessage(data.error.message));
         return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
@@ -1058,10 +1070,10 @@
             );
 
             const data = await res.json();
-            if (data.error) throw new Error(data.error.message);
+            if (data.error) throw new Error(geminiErrorMessage(data.error.message));
 
             const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-            if (!text) throw new Error('No text returned');
+            if (!text) throw new Error('No text extracted — try a different PDF or paste the text manually.');
 
             document.getElementById(targetTextareaId).value = text;
             const details = document.getElementById(targetTextareaId)?.closest('details');
@@ -2018,7 +2030,7 @@ They are applying for this role:
 - Job description: ${job.description || 'Not provided'}
 
 Their resume:
-${profile.resumeText}
+${(profile.resumeText || '').slice(0, 8000)}
 
 Tone instruction: ${TONE_INSTRUCTIONS[selectedTone]}
 

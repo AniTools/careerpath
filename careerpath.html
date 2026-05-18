@@ -628,19 +628,10 @@
                     </div>
                     <div class="border-t border-slate-100 pt-4 space-y-4">
                         <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">AI Settings</h4>
-                        <p class="text-xs text-slate-400">API keys are stored only in your browser and sent directly to the respective service.</p>
-                        <!-- Anthropic key -->
-                        <div class="space-y-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Anthropic API Key <span class="normal-case font-normal text-slate-400">(Cover letters & job parsing)</span></label>
-                            <div class="flex gap-2 items-center">
-                                <input type="password" id="settings-api-key" placeholder="sk-ant-..." class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-50 transition-all font-mono">
-                                <button onclick="saveApiKeyFromSettings()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition">Save</button>
-                            </div>
-                            <p id="api-key-status" class="text-xs text-slate-400 hidden"></p>
-                        </div>
+                        <p class="text-xs text-slate-400">Your Google AI key powers everything — PDF extraction, cover letters, and job parsing. Get one free at <strong>aistudio.google.com</strong> → Get API key.</p>
                         <!-- Google key -->
                         <div class="space-y-1.5">
-                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Google AI API Key <span class="normal-case font-normal text-slate-400">(Resume PDF extraction — free tier)</span></label>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Google AI API Key</label>
                             <div class="flex gap-2 items-center">
                                 <input type="password" id="settings-google-key" placeholder="AIza..." class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-50 transition-all font-mono">
                                 <button onclick="saveGoogleKeyFromSettings()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2.5 px-4 rounded-xl transition">Save</button>
@@ -1000,24 +991,21 @@
         return !!(profile.name && profile.resumeText);
     }
 
-    // ─── API KEY ──────────────────────────────────────────────────────────────
-    function getApiKey() {
-        return localStorage.getItem('careerpath_api_key') || '';
-    }
-
-    function saveApiKey(key) {
-        localStorage.setItem('careerpath_api_key', key.trim());
-    }
-
-    function getAIHeaders() {
-        const key = getApiKey();
-        if (!key) return null;
-        return {
-            "Content-Type": "application/json",
-            "x-api-key": key,
-            "anthropic-version": "2023-06-01",
-            "anthropic-dangerous-direct-browser-access": "true"
-        };
+    // ─── GEMINI AI ────────────────────────────────────────────────────────────
+    async function callGemini(prompt) {
+        const key = getGoogleKey();
+        if (!key) throw new Error('no-key');
+        const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+            }
+        );
+        const data = await res.json();
+        if (data.error) throw new Error(data.error.message);
+        return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
     }
 
     // ─── PDF RESUME EXTRACTION (Google Gemini) ───────────────────────────────
@@ -1136,8 +1124,6 @@
             portfolioUrl: document.getElementById('wiz-portfolio').value.trim(),
             resumeText: document.getElementById('wiz-resume').value.trim()
         };
-        const apiKey = document.getElementById('wiz-apikey').value.trim();
-        if (apiKey.startsWith('sk-ant-')) saveApiKey(apiKey);
         const googleKey = document.getElementById('wiz-google-key').value.trim();
         if (googleKey) saveGoogleKey(googleKey);
         saveProfile(p);
@@ -1254,12 +1240,6 @@
             document.getElementById('settings-title').value = profile.currentTitle || '';
             document.getElementById('settings-portfolio').value = profile.portfolioUrl || '';
             document.getElementById('settings-resume').value = profile.resumeText || '';
-            // API key statuses
-            const hasKey = !!getApiKey();
-            const status = document.getElementById('api-key-status');
-            status.textContent = hasKey ? 'Anthropic key is saved and active.' : 'No Anthropic key set — cover letter & job parsing AI will not work.';
-            status.className = hasKey ? 'text-xs text-emerald-600' : 'text-xs text-rose-500';
-            status.classList.remove('hidden');
             const hasGoogle = !!getGoogleKey();
             const gStatus = document.getElementById('google-key-status');
             gStatus.textContent = hasGoogle ? 'Google key is saved — PDF extraction ready.' : 'No Google key set — resume PDF upload will not work.';
@@ -1798,19 +1778,6 @@ REQUIREMENTS:
         showToast("Google API key saved!");
     }
 
-    function saveApiKeyFromSettings() {
-        const key = document.getElementById('settings-api-key').value.trim();
-        if (!key) { showToast("Please enter an API key", "error"); return; }
-        if (!key.startsWith('sk-ant-')) { showToast("Key should start with sk-ant-", "error"); return; }
-        saveApiKey(key);
-        document.getElementById('settings-api-key').value = '';
-        const status = document.getElementById('api-key-status');
-        status.textContent = 'API key saved. AI tools are ready!';
-        status.className = 'text-xs text-emerald-600';
-        status.classList.remove('hidden');
-        showToast("API key saved!");
-    }
-
     function exportData() {
         const a = document.createElement('a');
         a.setAttribute('href','data:text/json;charset=utf-8,'+encodeURIComponent(JSON.stringify(jobs,null,2)));
@@ -2067,30 +2034,17 @@ Write a compelling, tailored cover letter. It should:
 
 Do NOT include a subject line or email header. Output only the letter body, starting with the salutation.`;
 
-        const aiHeaders = getAIHeaders();
-        if (!aiHeaders) {
+        if (!getGoogleKey()) {
             clearInterval(msgInterval);
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-placeholder').classList.remove('hidden');
-            showToast("Add your API key in Settings first", "error");
+            showToast("Add your Google API key in Settings first", "error");
             return;
         }
 
         try {
-            const response = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: aiHeaders,
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 1000,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-
             clearInterval(msgInterval);
-            const data = await response.json();
-            if (data.error) throw new Error(data.error.message);
-            const text = data.content?.find(b => b.type === 'text')?.text || "Could not generate letter. Please try again.";
+            const text = await callGemini(prompt);
 
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-result').classList.remove('hidden');
@@ -2103,7 +2057,7 @@ Do NOT include a subject line or email header. Output only the letter body, star
             clearInterval(msgInterval);
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-placeholder').classList.remove('hidden');
-            showToast(err.message || "API error — please try again", "error");
+            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : (err.message || "API error — please try again"), "error");
         }
     }
 
@@ -2212,33 +2166,21 @@ Fields to extract:
 Source URL: ${url}
 Page content: ${pageText}`;
 
-        const aiHeaders = getAIHeaders();
-        if (!aiHeaders) {
+        if (!getGoogleKey()) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast("Add your API key in Settings first", "error");
+            showToast("Add your Google API key in Settings first", "error");
             return;
         }
 
         try {
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: aiHeaders,
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 600,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-            const data = await res.json();
-            if (data.error) throw new Error(data.error.message);
-            const raw = data.content?.find(b => b.type === 'text')?.text || '{}';
+            const raw = await callGemini(prompt);
             const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
             showParseResults(parsed, url);
         } catch(err) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast(err.message || "Could not extract — try pasting the text instead", "error");
+            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : "Could not extract — try pasting the text instead", "error");
         }
     }
 
@@ -2265,33 +2207,21 @@ Fields to extract:
 Job listing text:
 ${text.slice(0, 3000)}`;
 
-        const aiHeaders = getAIHeaders();
-        if (!aiHeaders) {
+        if (!getGoogleKey()) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast("Add your API key in Settings first", "error");
+            showToast("Add your Google API key in Settings first", "error");
             return;
         }
 
         try {
-            const res = await fetch("https://api.anthropic.com/v1/messages", {
-                method: "POST",
-                headers: aiHeaders,
-                body: JSON.stringify({
-                    model: "claude-sonnet-4-20250514",
-                    max_tokens: 500,
-                    messages: [{ role: "user", content: prompt }]
-                })
-            });
-            const data = await res.json();
-            if (data.error) throw new Error(data.error.message);
-            const raw = data.content?.find(b => b.type === 'text')?.text || '{}';
+            const raw = await callGemini(prompt);
             const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
             showParseResults(parsed, '');
         } catch (err) {
             document.getElementById('parse-loading').classList.add('hidden');
             document.getElementById('parse-placeholder').classList.remove('hidden');
-            showToast(err.message || "Could not parse — try again", "error");
+            showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : "Could not parse — try again", "error");
         }
     }
 
@@ -2532,7 +2462,7 @@ ${text.slice(0, 3000)}`;
             <div id="wiz-step-4" class="wiz-step hidden bg-white/5 border border-white/10 rounded-2xl p-8 space-y-5 backdrop-blur-md">
                 <div>
                     <h2 class="font-display text-xl font-extrabold text-white">Enable AI Features</h2>
-                    <p class="text-white/50 text-xs mt-1">Add your API keys to unlock all AI features. Both are stored only in your browser.</p>
+                    <p class="text-white/50 text-xs mt-1">One free Google key powers everything — PDF extraction, cover letters, and job parsing.</p>
                 </div>
                 <!-- Google key -->
                 <div class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
@@ -2542,12 +2472,6 @@ ${text.slice(0, 3000)}`;
                     </div>
                     <input type="password" id="wiz-google-key" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:border-purple-400 transition-all">
                     <p class="text-[10px] text-white/30">Used for resume PDF extraction. Get it free at <span class="text-purple-300 font-semibold">aistudio.google.com</span> → Get API key.</p>
-                </div>
-                <!-- Anthropic key -->
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-                    <label class="text-[10px] font-bold text-white/50 uppercase tracking-wider block">Anthropic API Key</label>
-                    <input type="password" id="wiz-apikey" placeholder="sk-ant-..." class="w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:border-purple-400 transition-all">
-                    <p class="text-[10px] text-white/30">Used for cover letters & job parsing. Get it at <span class="text-purple-300 font-semibold">console.anthropic.com</span> → API Keys.</p>
                 </div>
                 <div class="flex space-x-3">
                     <button onclick="wizBack()" class="bg-white/10 hover:bg-white/15 text-white font-semibold py-3 px-5 rounded-xl transition text-sm">Back</button>

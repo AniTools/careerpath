@@ -1,0 +1,26 @@
+{
+  "name": "CareerPath",
+  "short_name": "CareerPath",
+  "description": "Your personal job application tracker and career command center",
+  "start_url": "./careerpath.html",
+  "display": "standalone",
+  "background_color": "#0f0a1a",
+  "theme_color": "#a855f7",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["productivity", "business"]
+}

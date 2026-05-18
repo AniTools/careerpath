@@ -2432,25 +2432,20 @@ ${text.slice(0, 3000)}`;
                 </div>
             </div>
 
-            <!-- Step 3: Resume -->
+            <!-- Step 3: API Key -->
             <div id="wiz-step-3" class="wiz-step hidden bg-white/5 border border-white/10 rounded-2xl p-8 space-y-5 backdrop-blur-md">
                 <div>
-                    <h2 class="font-display text-xl font-extrabold text-white">Upload your resume</h2>
-                    <p class="text-white/50 text-xs mt-1">The AI uses this to write cover letters and analyze job matches. You can update it anytime in Settings.</p>
+                    <h2 class="font-display text-xl font-extrabold text-white">Enable AI Features</h2>
+                    <p class="text-white/50 text-xs mt-1">One free Google key powers everything — PDF extraction, cover letters, and job parsing.</p>
                 </div>
-                <!-- PDF Upload -->
-                <label class="flex flex-col items-center justify-center border-2 border-dashed border-white/20 hover:border-purple-400 rounded-xl p-6 cursor-pointer transition-all group">
-                    <i class="fa-solid fa-file-arrow-up text-3xl text-white/30 group-hover:text-purple-400 transition mb-2"></i>
-                    <span class="text-sm font-semibold text-white/60 group-hover:text-white transition">Click to upload your resume PDF</span>
-                    <span class="text-xs text-white/30 mt-1">PDF files only</span>
-                    <input type="file" accept=".pdf" class="hidden" onchange="extractPdfText(this.files[0],'wiz-pdf-status','wiz-resume')">
-                </label>
-                <p id="wiz-pdf-status" class="hidden text-xs text-purple-400 mt-1"></p>
-                <!-- Fallback textarea -->
-                <details class="group">
-                    <summary class="text-xs text-white/40 cursor-pointer hover:text-white/70 transition select-none">Or paste resume text manually</summary>
-                    <textarea id="wiz-resume" rows="8" placeholder="Paste your resume text here…" class="mt-2 w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-400 transition-all resize-none custom-scrollbar"></textarea>
-                </details>
+                <div class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
+                    <div class="flex items-center space-x-2 mb-1">
+                        <span class="text-[10px] font-bold text-white/50 uppercase tracking-wider">Google AI API Key</span>
+                        <span class="bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Free</span>
+                    </div>
+                    <input type="password" id="wiz-google-key" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:border-purple-400 transition-all">
+                    <p class="text-[10px] text-white/30">Get it free at <span class="text-purple-300 font-semibold">aistudio.google.com</span> → Get API key. Takes 2 minutes.</p>
+                </div>
                 <div class="flex space-x-3">
                     <button onclick="wizBack()" class="bg-white/10 hover:bg-white/15 text-white font-semibold py-3 px-5 rounded-xl transition text-sm">Back</button>
                     <button onclick="wizNext()" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-3 rounded-xl transition text-sm">Next <i class="fa-solid fa-arrow-right ml-1.5"></i></button>
@@ -2458,26 +2453,28 @@ ${text.slice(0, 3000)}`;
                 <p class="text-center text-white/30 text-xs">You can skip this and add it later in Settings.</p>
             </div>
 
-            <!-- Step 4: API Key -->
+            <!-- Step 4: Resume -->
             <div id="wiz-step-4" class="wiz-step hidden bg-white/5 border border-white/10 rounded-2xl p-8 space-y-5 backdrop-blur-md">
                 <div>
-                    <h2 class="font-display text-xl font-extrabold text-white">Enable AI Features</h2>
-                    <p class="text-white/50 text-xs mt-1">One free Google key powers everything — PDF extraction, cover letters, and job parsing.</p>
+                    <h2 class="font-display text-xl font-extrabold text-white">Upload your resume</h2>
+                    <p class="text-white/50 text-xs mt-1">The AI uses this to write cover letters and analyze job matches. You can update it anytime in Settings.</p>
                 </div>
-                <!-- Google key -->
-                <div class="bg-white/5 border border-white/10 rounded-xl p-4 space-y-2">
-                    <div class="flex items-center space-x-2 mb-1">
-                        <span class="text-[10px] font-bold text-white/50 uppercase tracking-wider">Google AI API Key</span>
-                        <span class="bg-emerald-500/20 text-emerald-300 text-[9px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Free</span>
-                    </div>
-                    <input type="password" id="wiz-google-key" placeholder="AIza..." class="w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-2.5 text-sm font-mono focus:outline-none focus:border-purple-400 transition-all">
-                    <p class="text-[10px] text-white/30">Used for resume PDF extraction. Get it free at <span class="text-purple-300 font-semibold">aistudio.google.com</span> → Get API key.</p>
-                </div>
+                <label class="flex flex-col items-center justify-center border-2 border-dashed border-white/20 hover:border-purple-400 rounded-xl p-6 cursor-pointer transition-all group">
+                    <i class="fa-solid fa-file-arrow-up text-3xl text-white/30 group-hover:text-purple-400 transition mb-2"></i>
+                    <span class="text-sm font-semibold text-white/60 group-hover:text-white transition">Click to upload your resume PDF</span>
+                    <span class="text-xs text-white/30 mt-1">PDF files only</span>
+                    <input type="file" accept=".pdf" class="hidden" onchange="extractPdfText(this.files[0],'wiz-pdf-status','wiz-resume')">
+                </label>
+                <p id="wiz-pdf-status" class="hidden text-xs text-purple-400 mt-1"></p>
+                <details class="group">
+                    <summary class="text-xs text-white/40 cursor-pointer hover:text-white/70 transition select-none">Or paste resume text manually</summary>
+                    <textarea id="wiz-resume" rows="8" placeholder="Paste your resume text here…" class="mt-2 w-full bg-white/10 border border-white/20 text-white placeholder-white/30 rounded-xl p-3 text-sm focus:outline-none focus:border-purple-400 transition-all resize-none custom-scrollbar"></textarea>
+                </details>
                 <div class="flex space-x-3">
                     <button onclick="wizBack()" class="bg-white/10 hover:bg-white/15 text-white font-semibold py-3 px-5 rounded-xl transition text-sm">Back</button>
                     <button onclick="wizFinish()" class="flex-1 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-purple-500/30 text-sm"><i class="fa-solid fa-check mr-2"></i>Let's Go!</button>
                 </div>
-                <p class="text-center text-white/30 text-xs">You can skip this and add keys later in Settings.</p>
+                <p class="text-center text-white/30 text-xs">You can skip this and add it later in Settings.</p>
             </div>
         </div>
     </div>

@@ -222,7 +222,12 @@
             </button>
         </nav>
 
-        <div class="p-3 border-t border-white/5 hidden md:block">
+        <div class="p-3 border-t border-white/5 hidden md:block space-y-2">
+            <!-- Backup warning — hidden once Gist is connected -->
+            <div id="backup-warning" class="hidden bg-amber-500/15 border border-amber-400/30 rounded-xl p-2.5 cursor-pointer hover:bg-amber-500/20 transition" onclick="switchView('settings')">
+                <p class="text-[10px] font-bold text-amber-300 flex items-center gap-1.5"><i class="fa-solid fa-triangle-exclamation"></i> Data not backed up</p>
+                <p class="text-[9px] text-amber-200/60 mt-0.5">Clearing your browser will erase everything. Set up cloud backup →</p>
+            </div>
             <div class="bg-white/5 p-3 rounded-xl flex items-center space-x-3 border border-white/5 cursor-pointer hover:bg-white/10 transition" onclick="switchView('settings')">
                 <div id="sidebar-avatar" class="h-9 w-9 rounded-xl bg-gradient-to-tr from-purple-500 to-pink-400 flex items-center justify-center font-bold text-white text-sm shadow-md flex-shrink-0">?</div>
                 <div class="min-w-0">
@@ -985,6 +990,8 @@
         document.getElementById('sidebar-name').textContent = name || 'Your Profile';
         document.getElementById('sidebar-title').textContent = title || 'Complete setup';
         document.getElementById('sidebar-tagline').textContent = name ? `${name.split(' ')[0]} · ${title || 'Job Seeker'}` : 'Your Career Hub';
+        const warn = document.getElementById('backup-warning');
+        if (warn) warn.classList.toggle('hidden', !!getGithubToken());
     }
 
     function profileIsComplete() {
@@ -1898,6 +1905,7 @@ REQUIREMENTS:
             document.getElementById('gist-status').textContent = `✓ Connected! Gist ID: ${gistId}`;
             document.getElementById('gist-status').className = 'text-xs text-emerald-600';
             showToast('GitHub Gist backup active!');
+            updateSidebarProfile();
         } catch (e) {
             document.getElementById('gist-status').textContent = 'Failed — check your token has "gist" scope.';
             document.getElementById('gist-status').className = 'text-xs text-rose-500';

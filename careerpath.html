@@ -2118,6 +2118,18 @@ Do NOT include a subject line or email header. Output only the letter body, star
         document.getElementById('parse-placeholder').classList.remove('hidden');
     }
 
+    function extractJSON(raw) {
+        // Try direct parse first
+        try { return JSON.parse(raw.trim()); } catch(e) {}
+        // Strip markdown fences (```json ... ``` or ``` ... ```)
+        const stripped = raw.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '').trim();
+        try { return JSON.parse(stripped); } catch(e) {}
+        // Find first {...} block in the response
+        const match = raw.match(/\{[\s\S]*\}/);
+        if (match) return JSON.parse(match[0]);
+        throw new Error('Could not read AI response — try again');
+    }
+
     function showParseResults(parsed, sourceUrl) {
         document.getElementById('parse-loading').classList.add('hidden');
         document.getElementById('parse-placeholder').classList.add('hidden');
@@ -2195,7 +2207,7 @@ Page content: ${pageText}`;
 
         try {
             const raw = await callGemini(prompt);
-            const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+            const parsed = extractJSON(raw);
             showParseResults(parsed, url);
         } catch(err) {
             document.getElementById('parse-loading').classList.add('hidden');
@@ -2236,7 +2248,7 @@ ${text.slice(0, 3000)}`;
 
         try {
             const raw = await callGemini(prompt);
-            const parsed = JSON.parse(raw.replace(/```json|```/g,'').trim());
+            const parsed = extractJSON(raw);
             showParseResults(parsed, '');
         } catch (err) {
             document.getElementById('parse-loading').classList.add('hidden');

@@ -662,6 +662,14 @@
                         </div>
                     </div>
                     <div class="border-t border-slate-100 pt-4 space-y-3">
+                        <div class="flex items-center justify-between gap-3">
+                            <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Data Saver</h4>
+                            <button onclick="recoverFromGist()" class="text-xs font-semibold text-purple-700 hover:text-purple-900">Recover from GitHub backup</button>
+                        </div>
+                        <p class="text-xs text-slate-400">Restore points are made automatically in this browser, and always before anything is removed or replaced.</p>
+                        <div id="saver-list" class="space-y-2"></div>
+                    </div>
+                    <div class="border-t border-slate-100 pt-4 space-y-3">
                         <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Export & Import</h4>
                         <div class="flex flex-wrap gap-3">
                             <button onclick="exportData()" class="bg-ink-900 hover:bg-ink-800 text-white text-xs font-semibold py-2.5 px-4 rounded-xl flex items-center space-x-2 transition">
@@ -978,6 +986,7 @@
     function saveProfile(p) {
         profile = p;
         localStorage.setItem('careerpath_profile', JSON.stringify(p));
+        markLocalChanged();
         updateSidebarProfile();
         pushToGist().catch(() => {});
     }
@@ -1184,12 +1193,20 @@
             showWizard();
         }
 
-        // Pull latest data from Gist in the background
-        if (getGithubToken() && getGistId()) {
+        // Send unsaved work first; only look for newer data when there is none
+        if (getGithubToken() && isLocalDirty()) {
+            pushToGist().catch(() => {});
+        } else if (getGithubToken() && getGistId()) {
             pullFromGist().then(synced => {
                 if (synced) { updateSidebarProfile(); renderApp(); updateSyncBadge(); }
             }).catch(() => {});
         }
+        window.addEventListener('online', () => { if (isLocalDirty()) pushToGist().catch(() => {}); });
+        // Keep several open tabs in step so a stale tab cannot overwrite newer work
+        window.addEventListener('storage', e => {
+            if (e.key !== 'careerpath_data' || e.newValue === null) return;
+            try { jobs = JSON.parse(e.newValue); renderApp(); } catch {}
+        });
         document.getElementById('mobile-menu-btn').addEventListener('click', () => {
             document.getElementById('sidebar-nav').classList.toggle('open');
         });
@@ -1818,9 +1835,119 @@ REQUIREMENTS:
     function confirmResetAll() { if (confirm("Clear ALL data?")) { jobs = []; saveAndSync(); showToast("Workspace cleared.","error"); } }
 
     function saveAndSync() {
-        localStorage.setItem('careerpath_data', JSON.stringify(jobs));
+        const previous = localStorage.getItem('careerpath_data');
+        const next = JSON.stringify(jobs);
+        if (previous && previous !== next) snapshotIfDue(previous);
+        try {
+            localStorage.setItem('careerpath_data', next);
+        } catch (e) {
+            showToast('Could not save — browser storage is full. Export a backup now.', 'error');
+            renderApp();
+            return;
+        }
+        markLocalChanged();
         renderApp();
+        updateSyncBadge();
         pushToGist().catch(() => {});
+    }
+
+    function markLocalChanged() {
+        localStorage.setItem('careerpath_saved_at', new Date().toISOString());
+        localStorage.setItem('careerpath_dirty', '1');
+    }
+    function isLocalDirty() { return localStorage.getItem('careerpath_dirty') === '1'; }
+
+    // ─── DATA SAVER (restore points kept in this browser) ─────────────────────
+    const SAVER_DB = 'careerpath_saver';
+    const SAVER_STORE = 'snapshots';
+    const SAVER_MAX = 30;
+    const SAVER_GAP_MS = 10 * 60 * 1000;
+
+    function saverDb() {
+        return new Promise((resolve, reject) => {
+            const req = indexedDB.open(SAVER_DB, 1);
+            req.onupgradeneeded = () => req.result.createObjectStore(SAVER_STORE, { keyPath: 'at' });
+            req.onsuccess = () => resolve(req.result);
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function listSnapshots() {
+        const db = await saverDb();
+        return new Promise((resolve, reject) => {
+            const req = db.transaction(SAVER_STORE).objectStore(SAVER_STORE).getAll();
+            req.onsuccess = () => resolve(req.result.sort((a, b) => b.at - a.at));
+            req.onerror = () => reject(req.error);
+        });
+    }
+
+    async function saveSnapshot(jobsJson, reason) {
+        let count = 0;
+        try { count = JSON.parse(jobsJson).length; } catch { return; }
+        const db = await saverDb();
+        const entry = { at: Date.now(), reason, count, jobs: jobsJson, profile: localStorage.getItem('careerpath_profile') || '{}' };
+        await new Promise((resolve, reject) => {
+            const tx = db.transaction(SAVER_STORE, 'readwrite');
+            tx.objectStore(SAVER_STORE).put(entry);
+            tx.oncomplete = resolve;
+            tx.onerror = () => reject(tx.error);
+        });
+        const all = await listSnapshots();
+        if (all.length > SAVER_MAX) {
+            const tx = db.transaction(SAVER_STORE, 'readwrite');
+            all.slice(SAVER_MAX).forEach(old => tx.objectStore(SAVER_STORE).delete(old.at));
+        }
+        localStorage.setItem('careerpath_last_snapshot', String(entry.at));
+    }
+
+    // Removing applications always gets a restore point; otherwise every 10 minutes
+    function snapshotIfDue(previousJson) {
+        let shrank = false;
+        try { shrank = JSON.parse(previousJson).length > jobs.length; } catch {}
+        const last = Number(localStorage.getItem('careerpath_last_snapshot') || 0);
+        if (!shrank && Date.now() - last < SAVER_GAP_MS) return;
+        saveSnapshot(previousJson, shrank ? 'Before removing' : 'Automatic').catch(() => {});
+    }
+
+    async function renderSaverList() {
+        const list = document.getElementById('saver-list');
+        if (!list) return;
+        let items = [];
+        try { items = await listSnapshots(); } catch {}
+        list.textContent = '';
+        if (!items.length) {
+            const none = document.createElement('p');
+            none.className = 'text-xs text-slate-400';
+            none.textContent = 'No restore points yet. They appear as you make changes.';
+            list.appendChild(none);
+            return;
+        }
+        items.slice(0, 10).forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'flex items-center justify-between gap-3 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2';
+            const label = document.createElement('p');
+            label.className = 'text-xs text-slate-600';
+            label.textContent = `${new Date(item.at).toLocaleString()} · ${item.count} application${item.count === 1 ? '' : 's'} · ${item.reason}`;
+            const btn = document.createElement('button');
+            btn.className = 'text-xs font-semibold text-purple-700 hover:text-purple-900 flex-shrink-0';
+            btn.textContent = 'Restore';
+            btn.onclick = () => restoreSnapshot(item.at);
+            row.append(label, btn);
+            list.appendChild(row);
+        });
+    }
+
+    async function restoreSnapshot(at) {
+        const item = (await listSnapshots()).find(x => x.at === at);
+        if (!item) return;
+        if (!confirm(`Go back to ${item.count} application(s) from ${new Date(item.at).toLocaleString()}? Your current data is kept as a restore point.`)) return;
+        await saveSnapshot(JSON.stringify(jobs), 'Before restoring');
+        jobs = JSON.parse(item.jobs);
+        try { profile = JSON.parse(item.profile); localStorage.setItem('careerpath_profile', item.profile); } catch {}
+        saveAndSync();
+        updateSidebarProfile();
+        renderSaverList();
+        showToast('Restored!');
     }
 
     // ─── GITHUB GIST BACKUP ───────────────────────────────────────────────────
@@ -1829,51 +1956,159 @@ REQUIREMENTS:
     function getGistId() { return localStorage.getItem('careerpath_gist_id') || ''; }
     function saveGistId(id) { localStorage.setItem('careerpath_gist_id', id.trim()); }
 
-    async function pushToGist() {
-        const token = getGithubToken();
-        if (!token) return;
-        const payload = JSON.stringify({ jobs, profile }, null, 2);
-        const body = { description: 'CareerPath backup', files: { 'careerpath-data.json': { content: payload } } };
-        const gistId = getGistId();
-        const url = gistId ? `https://api.github.com/gists/${gistId}` : 'https://api.github.com/gists';
-        const method = gistId ? 'PATCH' : 'POST';
-        if (!gistId) body.public = false;
-        const res = await fetch(url, {
-            method,
-            headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const data = await res.json();
-        if (!gistId && data.id) saveGistId(data.id);
-        if (data.id || gistId) {
-            localStorage.setItem('careerpath_last_sync', new Date().toISOString());
-            updateSyncBadge();
+    function setSyncError(message) {
+        const previous = localStorage.getItem('careerpath_sync_error');
+        if (message) {
+            localStorage.setItem('careerpath_sync_error', message);
+            if (message !== previous) showToast(message, 'error');
+        } else {
+            localStorage.removeItem('careerpath_sync_error');
         }
+        updateSyncBadge();
+        if (document.getElementById('gist-status')) updateGistStatusUI();
     }
 
+    function gistErrorMessage(status) {
+        if (status === 401) return 'Backup failed: your GitHub token expired. Reconnect it in Settings.';
+        if (status === 403) return 'Backup failed: GitHub refused the token. Check it has the gist permission.';
+        if (status === 404) return 'Backup failed: the backup was not found on GitHub.';
+        return `Backup failed: GitHub returned an error (${status}).`;
+    }
+
+    async function gistFetch(path, options = {}) {
+        let res;
+        try {
+            res = await fetch(`https://api.github.com/${path}`, {
+                cache: 'no-store',
+                ...options,
+                headers: { 'Authorization': `token ${getGithubToken()}`, 'Content-Type': 'application/json' }
+            });
+        } catch (e) {
+            const err = new Error('Backup waiting: no connection. It will retry automatically.');
+            setSyncError(err.message);
+            throw err;
+        }
+        if (!res.ok) {
+            const err = new Error(gistErrorMessage(res.status));
+            setSyncError(err.message);
+            throw err;
+        }
+        return res.json();
+    }
+
+    // One push at a time, so an older save can never land after a newer one
+    let pushRunning = null;
+    let pushAgain = false;
+    function pushToGist() {
+        if (!getGithubToken()) return Promise.resolve();
+        if (pushRunning) { pushAgain = true; return pushRunning; }
+        pushRunning = (async () => {
+            try {
+                do { pushAgain = false; await pushOnce(); } while (pushAgain);
+            } finally {
+                pushRunning = null;
+            }
+        })();
+        return pushRunning;
+    }
+
+    async function pushOnce() {
+        if (!localStorage.getItem('careerpath_saved_at')) localStorage.setItem('careerpath_saved_at', new Date().toISOString());
+        const savedAt = localStorage.getItem('careerpath_saved_at');
+        const payload = JSON.stringify({ savedAt, jobs, profile }, null, 2);
+        const body = { description: 'CareerPath backup', files: { 'careerpath-data.json': { content: payload } } };
+        const gistId = getGistId();
+        if (!gistId) body.public = false;
+        const data = await gistFetch(gistId ? `gists/${gistId}` : 'gists', { method: gistId ? 'PATCH' : 'POST', body: JSON.stringify(body) });
+        if (!gistId && data.id) saveGistId(data.id);
+        if (localStorage.getItem('careerpath_saved_at') === savedAt) localStorage.removeItem('careerpath_dirty');
+        localStorage.setItem('careerpath_last_sync', new Date().toISOString());
+        setSyncError('');
+    }
+
+    async function readGist(gistId) {
+        const data = await gistFetch(`gists/${gistId}`);
+        const content = data.files?.['careerpath-data.json']?.content;
+        if (!content) return null;
+        const parsed = JSON.parse(content);
+        return Array.isArray(parsed.jobs) ? parsed : null;
+    }
+
+    function applyRemote(remote) {
+        jobs = remote.jobs;
+        localStorage.setItem('careerpath_data', JSON.stringify(jobs));
+        if (remote.profile && typeof remote.profile === 'object') {
+            profile = remote.profile;
+            localStorage.setItem('careerpath_profile', JSON.stringify(profile));
+        }
+        localStorage.setItem('careerpath_saved_at', remote.savedAt || new Date().toISOString());
+        localStorage.removeItem('careerpath_dirty');
+    }
+
+    // Only ever replaces this browser's data with something genuinely newer
     async function pullFromGist() {
         const token = getGithubToken();
         const gistId = getGistId();
-        if (!token || !gistId) return false;
+        if (!token || !gistId || isLocalDirty()) return false;
         try {
-            const res = await fetch(`https://api.github.com/gists/${gistId}`, {
-                headers: { 'Authorization': `token ${token}` }
-            });
-            const data = await res.json();
-            const content = data.files?.['careerpath-data.json']?.content;
-            if (!content) return false;
-            const parsed = JSON.parse(content);
-            if (Array.isArray(parsed.jobs)) {
-                jobs = parsed.jobs;
-                localStorage.setItem('careerpath_data', JSON.stringify(jobs));
-            }
-            if (parsed.profile && typeof parsed.profile === 'object') {
-                profile = parsed.profile;
-                localStorage.setItem('careerpath_profile', JSON.stringify(profile));
-            }
+            const remote = await readGist(gistId);
+            if (!remote) return false;
+            setSyncError('');
             localStorage.setItem('careerpath_last_sync', new Date().toISOString());
+            const localAt = localStorage.getItem('careerpath_saved_at');
+            const localJson = localStorage.getItem('careerpath_data');
+            const localHasJobs = jobs.length > 0;
+            if (JSON.stringify(remote.jobs) === localJson) return false;
+            if (localHasJobs) {
+                if (!remote.savedAt) return false;
+                if (localAt && new Date(remote.savedAt) <= new Date(localAt)) return false;
+                await saveSnapshot(localJson, 'Before loading backup').catch(() => {});
+            }
+            applyRemote(remote);
             return true;
         } catch { return false; }
+    }
+
+    async function findExistingGist() {
+        const gists = await gistFetch('gists?per_page=100');
+        const matches = gists.filter(g => g.files && g.files['careerpath-data.json']);
+        matches.sort((a, b) => new Date(b.updated_at) - new Date(a.updated_at));
+        return matches[0]?.id || '';
+    }
+
+    // Adds anything the backup has that this browser lacks; never removes local data
+    async function mergeFromGist() {
+        const gistId = getGistId();
+        if (!gistId) return 0;
+        const remote = await readGist(gistId);
+        if (!remote) return 0;
+        const known = new Set(jobs.map(j => j.id));
+        const missing = remote.jobs.filter(j => !known.has(j.id));
+        const profileEmpty = !profile || Object.keys(profile).length === 0;
+        if (!missing.length && !profileEmpty) return 0;
+        const current = localStorage.getItem('careerpath_data');
+        if (current) await saveSnapshot(current, 'Before merging backup').catch(() => {});
+        jobs = [...jobs, ...missing];
+        localStorage.setItem('careerpath_data', JSON.stringify(jobs));
+        if (profileEmpty && remote.profile && typeof remote.profile === 'object') {
+            profile = remote.profile;
+            localStorage.setItem('careerpath_profile', JSON.stringify(profile));
+            updateSidebarProfile();
+        }
+        markLocalChanged();
+        renderApp();
+        return missing.length;
+    }
+
+    async function recoverFromGist() {
+        if (!getGithubToken()) { showToast('Connect your GitHub token first', 'error'); return; }
+        try {
+            if (!getGistId()) saveGistId(await findExistingGist());
+            const added = await mergeFromGist();
+            await pushToGist();
+            showToast(added ? `Recovered ${added} application(s)!` : 'Nothing missing — you already have everything in the backup.');
+            renderSaverList();
+        } catch (e) { showToast(e.message || 'Recovery failed', 'error'); }
     }
 
     function updateSyncBadge() {
@@ -1881,7 +2116,13 @@ REQUIREMENTS:
         const el = document.getElementById('sync-status');
         if (!el) return;
         if (!getGithubToken()) { el.textContent = ''; return; }
-        if (ts) {
+        if (localStorage.getItem('careerpath_sync_error')) {
+            el.textContent = '⚠ Backup failed';
+            el.className = 'text-[9px] text-rose-400 font-semibold';
+        } else if (isLocalDirty()) {
+            el.textContent = '☁ Saving…';
+            el.className = 'text-[9px] text-amber-400 font-semibold';
+        } else if (ts) {
             const ago = Math.round((Date.now() - new Date(ts)) / 60000);
             el.textContent = ago < 1 ? '☁ Just synced' : `☁ Synced ${ago}m ago`;
             el.className = 'text-[9px] text-emerald-400 font-semibold';
@@ -1900,6 +2141,11 @@ REQUIREMENTS:
         document.getElementById('gist-status').className = 'text-xs text-purple-600';
         document.getElementById('gist-status').classList.remove('hidden');
         try {
+            if (!getGistId()) {
+                const existing = await findExistingGist();
+                if (existing) saveGistId(existing);
+            }
+            await mergeFromGist();
             await pushToGist();
             const gistId = getGistId();
             document.getElementById('gist-status').textContent = `✓ Connected! Gist ID: ${gistId}`;
@@ -1907,7 +2153,7 @@ REQUIREMENTS:
             showToast('GitHub Gist backup active!');
             updateSidebarProfile();
         } catch (e) {
-            document.getElementById('gist-status').textContent = 'Failed — check your token has "gist" scope.';
+            document.getElementById('gist-status').textContent = e.message || 'Failed — check your token has "gist" scope.';
             document.getElementById('gist-status').className = 'text-xs text-rose-500';
         }
     }
@@ -1921,7 +2167,7 @@ REQUIREMENTS:
             showToast('Synced to GitHub Gist!');
             updateSyncBadge();
             updateGistStatusUI();
-        } catch { showToast('Sync failed — check your connection', 'error'); }
+        } catch (e) { showToast(e.message || 'Sync failed — check your connection', 'error'); }
     }
 
     function updateGistStatusUI() {
@@ -1930,9 +2176,14 @@ REQUIREMENTS:
         const hasToken = !!getGithubToken();
         const gistId = getGistId();
         const ts = localStorage.getItem('careerpath_last_sync');
+        const syncError = localStorage.getItem('careerpath_sync_error');
+        renderSaverList();
         if (!hasToken) {
             el.textContent = 'Not configured — enter your GitHub token below.';
             el.className = 'text-xs text-slate-400';
+        } else if (syncError) {
+            el.textContent = syncError;
+            el.className = 'text-xs text-rose-500';
         } else if (ts) {
             const ago = Math.round((Date.now() - new Date(ts)) / 60000);
             el.textContent = `✓ Active — last synced ${ago < 1 ? 'just now' : ago + 'm ago'}${gistId ? ' · Gist: ' + gistId.slice(0,8) + '…' : ''}`;

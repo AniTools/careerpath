@@ -1,5 +1,6 @@
-const CACHE = 'careerpath-v2';
+const CACHE = 'careerpath-v3';
 const SHELL = ['./careerpath.html', './manifest.json', './icon.svg', './icon-maskable.svg'];
+const NEVER_CACHE = ['api.github.com', 'generativelanguage.googleapis.com', 'api.anthropic.com', 'allorigins'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
@@ -16,34 +17,17 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // Never cache API calls
-  if (e.request.url.includes('api.anthropic.com') || e.request.url.includes('allorigins')) return;
+  if (e.request.method !== 'GET') return;
+  if (NEVER_CACHE.some(host => e.request.url.includes(host))) return;
 
-  // Cache-first for same-origin, network-first for CDN
-  const isSameOrigin = e.request.url.startsWith(self.location.origin);
-  if (isSameOrigin) {
-    e.respondWith(
-      caches.match(e.request).then(cached => {
-        if (cached) return cached;
-        return fetch(e.request).then(res => {
-          if (res.ok) {
-            const clone = res.clone();
-            caches.open(CACHE).then(c => c.put(e.request, clone));
-          }
-          return res;
-        });
-      })
-    );
-  } else {
-    // Network-first for CDN (fonts, tailwind, chartjs, fa)
-    e.respondWith(
-      fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match(e.request))
-    );
-  }
+  // Network-first so updates arrive immediately; the cache is only for offline use
+  e.respondWith(
+    fetch(e.request).then(res => {
+      if (res.ok) {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+      }
+      return res;
+    }).catch(() => caches.match(e.request))
+  );
 });

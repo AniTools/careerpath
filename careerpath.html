@@ -622,7 +622,28 @@
                             </div>
                             <p class="px-6 pt-3 text-[10px] text-slate-400"><i class="fa-solid fa-pen mr-1"></i>You can edit the letter here before copying or downloading.</p>
                             <div class="flex-1 flex flex-col p-6 pt-2">
-                                <textarea id="cl-output" spellcheck="true" class="flex-1 min-h-[480px] w-full text-sm text-slate-700 leading-relaxed resize-none border border-transparent hover:border-slate-100 focus:border-purple-200 focus:outline-none rounded-xl p-2 custom-scrollbar"></textarea>
+                                <textarea id="cl-output" spellcheck="true" class="flex-1 min-h-[420px] w-full text-sm text-slate-700 leading-relaxed resize-none border border-transparent hover:border-slate-100 focus:border-purple-200 focus:outline-none rounded-xl p-2 custom-scrollbar"></textarea>
+                            </div>
+                            <details id="cl-brief" class="hidden mx-6 mb-3 bg-slate-50 border border-slate-100 rounded-xl px-4 py-2.5">
+                                <summary class="text-[11px] font-bold text-slate-600 cursor-pointer"><i class="fa-solid fa-bullseye mr-1.5 text-purple-500"></i>Why this letter: what the role needs → your matching work</summary>
+                                <ul id="cl-brief-list" class="mt-2 space-y-1.5 text-[11px] text-slate-500 leading-relaxed list-disc pl-4"></ul>
+                            </details>
+                            <div class="border-t border-slate-100 p-4 space-y-2.5 flex-shrink-0">
+                                <div class="flex items-center justify-between">
+                                    <p class="text-[11px] font-bold text-slate-600"><i class="fa-solid fa-comments mr-1.5 text-purple-500"></i>Personalize with AI</p>
+                                    <button id="cl-undo-btn" onclick="undoCLChange()" class="hidden text-[11px] font-semibold text-slate-400 hover:text-purple-600"><i class="fa-solid fa-rotate-left mr-1"></i>Undo</button>
+                                </div>
+                                <div id="cl-chat-log" class="hidden space-y-2 max-h-48 overflow-y-auto custom-scrollbar"></div>
+                                <div class="flex flex-wrap gap-1.5">
+                                    <button onclick="clQuickAsk('Make the opening more specific to this company')" class="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100 rounded-full px-2.5 py-1 hover:bg-purple-100">More specific opening</button>
+                                    <button onclick="clQuickAsk('Make it shorter')" class="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100 rounded-full px-2.5 py-1 hover:bg-purple-100">Shorter</button>
+                                    <button onclick="clQuickAsk('Show more of my builder side: that I design and also build what I design')" class="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100 rounded-full px-2.5 py-1 hover:bg-purple-100">More builder side</button>
+                                    <button onclick="clQuickAsk('Make it sound more like me talking — simpler and more natural')" class="text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100 rounded-full px-2.5 py-1 hover:bg-purple-100">More natural</button>
+                                </div>
+                                <div class="flex items-end space-x-2">
+                                    <textarea id="cl-chat-input" rows="2" placeholder="Tell me about you or what to change… e.g. &quot;I've used their app for years&quot;, &quot;mention my EA work&quot;, &quot;más corta&quot;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendCLChat();}" class="flex-1 border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-50 transition-all resize-none"></textarea>
+                                    <button id="cl-chat-send" onclick="sendCLChat()" class="bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white text-xs font-bold px-3.5 py-2.5 rounded-xl transition" aria-label="Send"><i class="fa-solid fa-paper-plane"></i></button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -747,6 +768,14 @@
                                 <button onclick="resetCLField('example')" class="text-[10px] font-semibold text-purple-600 hover:text-purple-800">Restore default</button>
                             </div>
                             <textarea id="settings-cl-example" rows="8" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all custom-scrollbar"></textarea>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Projects & stories <span class="font-normal text-slate-400 normal-case">(the AI picks the ones that fit each role)</span></label>
+                                <button onclick="resetCLField('projects')" class="text-[10px] font-semibold text-purple-600 hover:text-purple-800">Restore default</button>
+                            </div>
+                            <textarea id="settings-cl-projects" rows="10" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all custom-scrollbar"></textarea>
+                            <p class="text-[10px] text-slate-400 mt-1">The more specific details you add here (results, tools, who it was for), the more different each letter will be.</p>
                         </div>
                         <div>
                             <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Letterhead logo</label>
@@ -1333,6 +1362,7 @@
             document.getElementById('settings-phone').value = profile.phone || '';
             document.getElementById('settings-cl-voice').value = profile.clVoice || DEFAULT_CL_VOICE;
             document.getElementById('settings-cl-example').value = profile.clExample ?? DEFAULT_CL_EXAMPLE;
+            document.getElementById('settings-cl-projects').value = profile.clProjects ?? DEFAULT_CL_PROJECTS;
             document.getElementById('settings-logo-preview').src = letterheadLogoSrc();
             const hasGoogle = !!getGoogleKey();
             const gStatus = document.getElementById('google-key-status');
@@ -2408,6 +2438,27 @@ Warmly,
 
 Ana Maria Posada`;
 
+    const DEFAULT_CL_PROJECTS = `GHG Accounting — sole designer of their carbon accounting software for about four years.
+Turned complex workflows into simpler experiences: dashboards, emission factor libraries, data imports and reporting. Designs the platform in Figma and created and maintains its design system. Also works on the company website, marketing materials and digital assets.
+
+AniDesignIt — my own design studio.
+Work with small businesses from the first idea all the way to launch: brand and website designed in Figma, then built, with forms, analytics and integrations set up. For the last two years I've been building websites and my own apps with AI.
+
+ZOLU — my first AI project, started at a hackathon.
+A voice-based AI companion for ADHD minds. Designed in Figma, prototyped with Bolt, connected to GPT-4 and given a voice with ElevenLabs.
+
+RetroPoket Color — went from my own UI designs to a real Android app built with Claude Code. Now in closed testing on Google Play.
+
+TaskBrew — a time-tracking and invoicing platform I designed and built with Figma, React, Firebase and AI-assisted development.
+
+Client acquisition agent — a React app using the Claude API that I built for my studio.
+
+My workflow — UX, wireframes and design systems in Figma, then Claude Code to build, then GitHub and a live deployment on Netlify.
+
+Electronic Arts — (add what you did there)
+
+IBM campaigns — (add what you did there)`;
+
     const CL_AVOID_STYLE = `NEGATIVE EXAMPLE — writing Ana does NOT want:
 - too corporate
 - sounds AI-generated
@@ -2457,18 +2508,20 @@ Keep the opening personal and the ending simple.`
     }
 
     function resetCLField(which) {
-        if (which === 'voice') document.getElementById('settings-cl-voice').value = DEFAULT_CL_VOICE;
-        else document.getElementById('settings-cl-example').value = DEFAULT_CL_EXAMPLE;
+        const defaults = { voice: DEFAULT_CL_VOICE, example: DEFAULT_CL_EXAMPLE, projects: DEFAULT_CL_PROJECTS };
+        document.getElementById(`settings-cl-${which}`).value = defaults[which];
         showToast('Default restored — click Save to keep it.');
     }
 
     function saveCoverLetterSettings() {
         const voice = document.getElementById('settings-cl-voice').value.trim();
         const example = document.getElementById('settings-cl-example').value.trim();
+        const projects = document.getElementById('settings-cl-projects').value.trim();
         const p = { ...profile };
         // Store only what differs from the defaults so future default updates still apply
         if (voice && voice !== DEFAULT_CL_VOICE) p.clVoice = voice; else delete p.clVoice;
         if (example !== DEFAULT_CL_EXAMPLE) p.clExample = example; else delete p.clExample;
+        if (projects !== DEFAULT_CL_PROJECTS) p.clProjects = projects; else delete p.clProjects;
         saveProfile(p);
         showToast('Cover letter settings saved!');
     }
@@ -2505,65 +2558,23 @@ Keep the opening personal and the ending simple.`
             .trim();
     }
 
-    async function generateCoverLetter() {
-        const jobId = document.getElementById('cl-job-select').value;
-        if (!jobId) { showToast("Please select a job first", "error"); return; }
-        const job = jobs.find(j => j.id === jobId);
-        if (!job) return;
-
-        const extra = document.getElementById('cl-extra').value.trim();
-        if (!profile.resumeText) {
-            showToast("Add your resume in Settings first", "error");
-            switchView('settings');
-            return;
-        }
-
-        // Show loading
-        document.getElementById('cl-placeholder').classList.add('hidden');
-        document.getElementById('cl-result').classList.add('hidden');
-        document.getElementById('cl-loading').classList.remove('hidden');
-
-        const loadingMessages = [
-            "Reading the job description...",
-            "Matching your experience to the role...",
-            "Drafting your opening hook...",
-            "Polishing the final paragraph..."
-        ];
-        let msgIdx = 0;
-        const msgEl = document.getElementById('cl-loading-msg');
-        const msgInterval = setInterval(() => {
-            msgIdx = (msgIdx + 1) % loadingMessages.length;
-            msgEl.textContent = loadingMessages[msgIdx];
-        }, 2000);
-
+    // Everything the AI knows about the applicant and the role, shared by the writer and the assistant
+    function clContext(job) {
         const userName = profile.name || 'the applicant';
-        const userTitle = profile.currentTitle || 'professional';
-        const userLocation = profile.location || '';
-        const userEmail = profile.email || '';
-        const userPortfolio = profile.portfolioUrl || '';
+        const projects = (profile.clProjects ?? DEFAULT_CL_PROJECTS).trim();
+        return `ABOUT THE APPLICANT
+Name: ${userName}${profile.currentTitle ? `\nTitle: ${profile.currentTitle}` : ''}${profile.location ? `\nLocation: ${profile.location}` : ''}${profile.portfolioUrl ? `\nPortfolio: ${profile.portfolioUrl}` : ''}
 
-        const voice = profile.clVoice || DEFAULT_CL_VOICE;
-        const example = (profile.clExample ?? DEFAULT_CL_EXAMPLE).trim();
-
-        const prompt = `${voice}
-
-${TONE_INSTRUCTIONS[selectedTone]}
-
-${CL_AVOID_STYLE}
-${example ? `
-EXAMPLE REFERENCE — a real letter that sounds like the writer. Match its voice, rhythm and simplicity. Do not copy its sentences, company details or structure word for word.
-"""
-${example}
-"""
-` : ''}
-ABOUT THE APPLICANT
-Name: ${userName}${userTitle ? `\nTitle: ${userTitle}` : ''}${userLocation ? `\nLocation: ${userLocation}` : ''}${userPortfolio ? `\nPortfolio: ${userPortfolio}` : ''}
-
-Resume (the only source of facts about her experience, together with the highlights above):
+Resume:
 """
 ${(profile.resumeText || '').slice(0, 8000)}
 """
-
+${projects ? `
+Projects & stories (real experience, written by the applicant; skip any line that says "add"):
+"""
+${projects.slice(0, 6000)}
+"""
+` : ''}
 THE ROLE
 Company: ${job.company}
 Title: ${job.title}
@@ -2571,41 +2582,207 @@ Work mode: ${job.workMode || 'not specified'}, Location: ${job.location || 'not 
 Job description:
 """
 ${(job.description || 'Not provided').slice(0, 8000)}
+"""`;
+    }
+
+    function clStyleRules() {
+        const voice = profile.clVoice || DEFAULT_CL_VOICE;
+        const example = (profile.clExample ?? DEFAULT_CL_EXAMPLE).trim();
+        return `${voice}
+
+${TONE_INSTRUCTIONS[selectedTone]}
+
+${CL_AVOID_STYLE}
+${example ? `
+EXAMPLE REFERENCE — a real letter that sounds like the writer. Match its voice, rhythm and simplicity only. Do not copy its sentences, its paragraph order or the experiences it mentions.
 """
-${extra ? `\nExtra context from ${userName.split(' ')[0] || 'the applicant'} (use it if it helps): ${extra}\n` : ''}
+${example}
+"""
+` : ''}`;
+    }
+
+    function parseJsonLoose(text) {
+        const m = String(text || '').match(/\{[\s\S]*\}/);
+        try { return m ? JSON.parse(m[0]) : null; } catch { return null; }
+    }
+
+    let clCurrentJob = null;
+    let clBrief = null;
+    let clChat = [];
+    let clUndo = [];
+
+    async function generateCoverLetter() {
+        const jobId = document.getElementById('cl-job-select').value;
+        if (!jobId) { showToast("Please select a job first", "error"); return; }
+        const job = jobs.find(j => j.id === jobId);
+        if (!job) return;
+        if (!profile.resumeText) {
+            showToast("Add your resume in Settings first", "error");
+            switchView('settings');
+            return;
+        }
+        if (!getGoogleKey()) { showToast("Add your Google API key in Settings first", "error"); return; }
+
+        const extra = document.getElementById('cl-extra').value.trim();
+        const firstName = (profile.name || '').split(' ')[0] || 'the applicant';
+        const userName = profile.name || 'the applicant';
+
+        document.getElementById('cl-placeholder').classList.add('hidden');
+        document.getElementById('cl-result').classList.add('hidden');
+        document.getElementById('cl-loading').classList.remove('hidden');
+        const msgEl = document.getElementById('cl-loading-msg');
+        msgEl.textContent = 'Reading the role and picking your most relevant work...';
+
+        try {
+            // Step 1: understand this specific role and choose matching experience
+            const briefPrompt = `You are helping ${userName} write a cover letter that could only have been written for this one role.
+
+${clContext(job)}
+${extra ? `\nExtra context from ${firstName}: ${extra}\n` : ''}
+Read the job description closely and answer in JSON only, no other text:
+{
+  "hook": "one specific, genuine thing about this company or role that could open the letter (a product, mission, project, team, or detail from the posting) — not a generic compliment",
+  "needs": ["the 3 most important things this role needs, in the posting's own terms"],
+  "matches": [{"need": "one of the needs", "evidence": "the single most relevant real experience or project from the resume / projects list, with a concrete detail"}],
+  "skip": ["experiences that are NOT relevant to this role and should be left out"],
+  "gap": "one requirement she doesn't clearly have, and how to frame it honestly (or empty)"
+}
+Use only real experience from the resume and projects list. Prefer different projects for different needs.`;
+            clBrief = parseJsonLoose(await callGemini(briefPrompt));
+
+            // Step 2: write the letter around that brief
+            msgEl.textContent = 'Writing your letter...';
+            const brief = clBrief ? `
+ROLE BRIEF — build the letter around this:
+Opening angle: ${clBrief.hook || ''}
+What the role needs → her matching experience:
+${(clBrief.matches || []).map(m => `- ${m.need} → ${m.evidence}`).join('\n')}
+Leave out: ${(clBrief.skip || []).join('; ') || 'nothing in particular'}
+${clBrief.gap ? `Gap to frame honestly (only if it helps): ${clBrief.gap}` : ''}
+` : '';
+            const prompt = `${clStyleRules()}
+${clContext(job)}
+${brief}${extra ? `\nExtra context from ${firstName} (use it): ${extra}\n` : ''}
+MAKE IT SPECIFIC TO THIS ROLE
+- Open with something specific to ${job.company} or this role, not a general statement about yourself.
+- Every body paragraph should connect one real experience to something this role actually asks for.
+- Only mention experience that is relevant here. It's fine to leave out big things if they don't fit.
+- Use at least one concrete detail from the job description (a product, tool, responsibility or value), in your own words.
+
 OUTPUT
 - Start with "Dear ${job.company} team," (or the hiring manager's name if the job description gives it).
 - End with a short sign-off line if it fits the tone, then "${userName}" on its own line.
 - Plain text only: no markdown, no bold, no bullet points, no subject line, no date, no address or contact header.
 - Separate paragraphs with one blank line.
 - Output only the letter.`;
-
-        if (!getGoogleKey()) {
-            clearInterval(msgInterval);
-            document.getElementById('cl-loading').classList.add('hidden');
-            document.getElementById('cl-placeholder').classList.remove('hidden');
-            showToast("Add your Google API key in Settings first", "error");
-            return;
-        }
-
-        try {
-            clearInterval(msgInterval);
             const text = await callGemini(prompt);
 
+            clCurrentJob = job;
+            clChat = [];
+            clUndo = [];
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-result').classList.remove('hidden');
             document.getElementById('cl-output').value = cleanLetterText(text);
-            clCurrentJob = job;
             document.getElementById('cl-result-badge').textContent = { professional: 'Professional', warm: 'Warm & Personal', creative: 'Creative', concise: 'Short & Sharp' }[selectedTone];
             document.getElementById('cl-result-job').textContent = `${job.company} — ${job.title}`;
+            renderCLBrief();
+            renderCLChat();
             showToast("Cover letter ready!");
-
         } catch (err) {
-            clearInterval(msgInterval);
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-placeholder').classList.remove('hidden');
             showToast(err.message === 'no-key' ? "Add your Google API key in Settings first" : (err.message || "API error — please try again"), "error");
         }
+    }
+
+    function renderCLBrief() {
+        const box = document.getElementById('cl-brief');
+        const matches = clBrief?.matches || [];
+        box.classList.toggle('hidden', !matches.length);
+        document.getElementById('cl-brief-list').innerHTML = matches.map(m =>
+            `<li><span class="font-semibold text-slate-700">${esc(m.need)}</span> <span class="text-slate-400">→</span> ${esc(m.evidence)}</li>`).join('');
+    }
+
+    function renderCLChat() {
+        const log = document.getElementById('cl-chat-log');
+        log.innerHTML = clChat.map(m => m.role === 'user'
+            ? `<div class="flex justify-end"><div class="bg-purple-600 text-white text-xs rounded-2xl rounded-br-md px-3 py-2 max-w-[85%] whitespace-pre-wrap">${esc(m.text)}</div></div>`
+            : `<div class="flex"><div class="bg-slate-100 text-slate-700 text-xs rounded-2xl rounded-bl-md px-3 py-2 max-w-[85%] whitespace-pre-wrap">${esc(m.text)}</div></div>`).join('');
+        log.classList.toggle('hidden', !clChat.length);
+        log.scrollTop = log.scrollHeight;
+        document.getElementById('cl-undo-btn').classList.toggle('hidden', !clUndo.length);
+    }
+
+    function clQuickAsk(text) {
+        document.getElementById('cl-chat-input').value = text;
+        sendCLChat();
+    }
+
+    // The assistant: tell it about yourself or what to change, and it rewrites the current letter
+    async function sendCLChat() {
+        const input = document.getElementById('cl-chat-input');
+        const request = input.value.trim();
+        if (!request) return;
+        if (!clCurrentJob) { showToast('Generate a letter first', 'error'); return; }
+        if (!getGoogleKey()) { showToast("Add your Google API key in Settings first", "error"); return; }
+        const current = document.getElementById('cl-output').value.trim();
+        const btn = document.getElementById('cl-chat-send');
+        input.value = '';
+        clChat.push({ role: 'user', text: request });
+        clChat.push({ role: 'assistant', text: 'Working on it…' });
+        renderCLChat();
+        btn.disabled = true; input.disabled = true;
+
+        const history = clChat.slice(0, -2).map(m => `${m.role === 'user' ? 'Applicant' : 'Assistant'}: ${m.text}`).join('\n');
+        const prompt = `You are a cover letter assistant working with the applicant on one letter. They tell you about themselves or what to change, and you rewrite the letter.
+
+${clStyleRules()}
+${clContext(clCurrentJob)}
+
+CURRENT LETTER (it may include the applicant's own edits — keep them unless asked otherwise):
+"""
+${current}
+"""
+${history ? `\nEARLIER IN THIS CONVERSATION:\n${history}\n` : ''}
+APPLICANT'S NEW MESSAGE:
+${request}
+
+RULES
+- Apply the request and keep everything else as close to the current letter as possible.
+- If they share new facts about themselves, weave them in naturally. They are true; don't exaggerate them or add details they didn't give.
+- Keep the voice and avoid the AI-sounding phrases listed above.
+- The letter is always in English. Write your note in the same language as the applicant's message.
+- If the message is a question and not a change, answer it in the note and return the letter unchanged.
+
+Reply in exactly this format:
+NOTE: one or two short sentences about what you changed
+LETTER:
+the full letter, plain text, no markdown`;
+
+        try {
+            const reply = await callGemini(prompt);
+            const m = reply.match(/NOTE:\s*([\s\S]*?)\n\s*LETTER:\s*([\s\S]*)$/i);
+            const note = m ? m[1].trim() : 'Here is the updated letter.';
+            const letter = cleanLetterText(m ? m[2] : reply);
+            if (letter && letter !== current) {
+                clUndo.push(current);
+                document.getElementById('cl-output').value = letter;
+            }
+            clChat[clChat.length - 1] = { role: 'assistant', text: note };
+        } catch (err) {
+            clChat[clChat.length - 1] = { role: 'assistant', text: err.message || 'Something went wrong — try again.' };
+        } finally {
+            btn.disabled = false; input.disabled = false;
+            renderCLChat();
+            input.focus();
+        }
+    }
+
+    function undoCLChange() {
+        if (!clUndo.length) return;
+        document.getElementById('cl-output').value = clUndo.pop();
+        clChat.push({ role: 'assistant', text: 'Undid the last change.' });
+        renderCLChat();
     }
 
     function copyCoverLetter() {
@@ -2617,7 +2794,6 @@ OUTPUT
         });
     }
 
-    let clCurrentJob = null;
 
     // Builds the letter on the AniDesignIt letterhead: bold date on top, contact footer and logo on every page
     function buildLetterheadHTML(text, job) {

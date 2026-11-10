@@ -241,6 +241,7 @@
 
     <!-- MAIN -->
     <main class="flex-1 flex flex-col overflow-hidden">
+        <button id="backup-alert-mobile" onclick="switchView('settings')" class="hidden md:hidden w-full text-left px-4 py-2.5 text-xs font-semibold flex-shrink-0"></button>
         <header class="bg-white border-b border-slate-100 h-14 flex items-center justify-between px-6 flex-shrink-0">
             <h2 id="view-title" class="font-display text-base font-bold text-slate-800">Dashboard</h2>
             <div class="flex items-center space-x-3">
@@ -571,7 +572,7 @@
                             <div class="grid grid-cols-2 gap-2">
                                 <button onclick="selectTone('professional')" id="tone-professional" class="tone-btn border-2 border-purple-500 bg-purple-50 text-purple-700 rounded-xl p-2.5 text-xs font-bold transition-all"><i class="fa-solid fa-briefcase mr-1.5"></i>Professional</button>
                                 <button onclick="selectTone('warm')" id="tone-warm" class="tone-btn border-2 border-slate-200 bg-white text-slate-500 rounded-xl p-2.5 text-xs font-bold transition-all hover:border-purple-300"><i class="fa-solid fa-heart mr-1.5"></i>Warm & Personal</button>
-                                <button onclick="selectTone('creative')" id="tone-creative" class="tone-btn border-2 border-slate-200 bg-white text-slate-500 rounded-xl p-2.5 text-xs font-bold transition-all hover:border-purple-300"><i class="fa-solid fa-paintbrush mr-1.5"></i>Creative Bold</button>
+                                <button onclick="selectTone('creative')" id="tone-creative" class="tone-btn border-2 border-slate-200 bg-white text-slate-500 rounded-xl p-2.5 text-xs font-bold transition-all hover:border-purple-300"><i class="fa-solid fa-paintbrush mr-1.5"></i>Creative</button>
                                 <button onclick="selectTone('concise')" id="tone-concise" class="tone-btn border-2 border-slate-200 bg-white text-slate-500 rounded-xl p-2.5 text-xs font-bold transition-all hover:border-purple-300"><i class="fa-solid fa-bolt mr-1.5"></i>Short & Sharp</button>
                             </div>
                         </div>
@@ -614,10 +615,14 @@
                                     <button onclick="copyCoverLetter()" class="bg-slate-100 hover:bg-purple-50 text-slate-700 hover:text-purple-700 text-xs font-bold px-3 py-1.5 rounded-xl border border-slate-200 hover:border-purple-200 transition flex items-center space-x-1.5">
                                         <i class="fa-regular fa-copy text-xs"></i><span id="copy-btn-text">Copy</span>
                                     </button>
+                                    <button onclick="downloadCoverLetter()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold px-3 py-1.5 rounded-xl transition flex items-center space-x-1.5">
+                                        <i class="fa-solid fa-file-arrow-down text-xs"></i><span>Download PDF</span>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                                <div id="cl-output" class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap"></div>
+                            <p class="px-6 pt-3 text-[10px] text-slate-400"><i class="fa-solid fa-pen mr-1"></i>You can edit the letter here before copying or downloading.</p>
+                            <div class="flex-1 flex flex-col p-6 pt-2">
+                                <textarea id="cl-output" spellcheck="true" class="flex-1 min-h-[480px] w-full text-sm text-slate-700 leading-relaxed resize-none border border-transparent hover:border-slate-100 focus:border-purple-200 focus:outline-none rounded-xl p-2 custom-scrollbar"></textarea>
                             </div>
                         </div>
                     </div>
@@ -699,6 +704,10 @@
                                 <input type="email" id="settings-email" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all">
                             </div>
                             <div>
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Phone <span class="font-normal text-slate-400 normal-case">(letterhead)</span></label>
+                                <input type="tel" id="settings-phone" placeholder="+1 (604) 000-0000" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all">
+                            </div>
+                            <div>
                                 <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Location</label>
                                 <input type="text" id="settings-location" placeholder="City, Province" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all">
                             </div>
@@ -722,6 +731,33 @@
                             </div>
                         </div>
                         <button onclick="saveProfileFromSettings()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2.5 px-5 rounded-xl transition">Save Profile</button>
+                    </div>
+                    <div class="border-t border-slate-100 pt-4 space-y-3">
+                        <h4 class="text-xs font-bold text-slate-600 uppercase tracking-wider">Cover Letter Voice & Letterhead</h4>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Writing voice <span class="font-normal text-slate-400 normal-case">(instructions the AI follows)</span></label>
+                                <button onclick="resetCLField('voice')" class="text-[10px] font-semibold text-purple-600 hover:text-purple-800">Restore default</button>
+                            </div>
+                            <textarea id="settings-cl-voice" rows="10" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all custom-scrollbar"></textarea>
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1">
+                                <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Example letter <span class="font-normal text-slate-400 normal-case">(a letter that sounds like you)</span></label>
+                                <button onclick="resetCLField('example')" class="text-[10px] font-semibold text-purple-600 hover:text-purple-800">Restore default</button>
+                            </div>
+                            <textarea id="settings-cl-example" rows="8" class="w-full border border-slate-200 rounded-xl p-2.5 text-xs focus:outline-none focus:border-purple-400 transition-all custom-scrollbar"></textarea>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1.5">Letterhead logo</label>
+                            <div class="flex items-center space-x-3">
+                                <div class="w-16 h-14 border border-slate-200 rounded-xl flex items-center justify-center bg-white p-1.5"><img id="settings-logo-preview" alt="Letterhead logo" class="max-w-full max-h-full"></div>
+                                <label class="text-xs font-semibold text-purple-600 hover:text-purple-800 cursor-pointer">Upload logo<input type="file" accept="image/png,image/jpeg,image/svg+xml" class="hidden" onchange="uploadLetterheadLogo(this.files[0]); this.value=''"></label>
+                                <button onclick="resetLetterheadLogo()" class="text-xs font-semibold text-slate-400 hover:text-slate-600">Use AniDesignIt logo</button>
+                            </div>
+                            <p class="text-[10px] text-slate-400 mt-1.5">The footer uses your location, email, phone and website from your profile.</p>
+                        </div>
+                        <button onclick="saveCoverLetterSettings()" class="bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold py-2.5 px-5 rounded-xl transition">Save Cover Letter Settings</button>
                     </div>
                     <div class="border-t border-slate-100 pt-4 space-y-3">
                         <h4 class="text-xs font-bold text-rose-600 uppercase tracking-wider">Danger Zone</h4>
@@ -1212,6 +1248,24 @@
         });
     };
 
+    // ─── SAFE OUTPUT ──────────────────────────────────────────────────────────
+    // Job data can come from web pages, AI output or imported files: treat it as text
+    function esc(value) {
+        return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    // A quoted JS string for use inside a double-quoted inline handler
+    function jsArg(value) { return esc(JSON.stringify(String(value ?? ''))); }
+    // Only http(s) links; adds https:// to bare addresses like linkedin.com/in/name
+    function safeUrl(value) {
+        const raw = String(value ?? '').trim();
+        if (!raw) return '';
+        const candidate = /^[\w-]+(\.[\w-]+)+([/?#]|$)/.test(raw) ? `https://${raw}` : raw;
+        try {
+            const url = new URL(candidate);
+            return url.protocol === 'http:' || url.protocol === 'https:' ? url.href : '';
+        } catch { return ''; }
+    }
+
     function renderApp() {
         updateDashboardStats();
         renderDashboardActivities();
@@ -1276,6 +1330,10 @@
             document.getElementById('settings-title').value = profile.currentTitle || '';
             document.getElementById('settings-portfolio').value = profile.portfolioUrl || '';
             document.getElementById('settings-resume').value = profile.resumeText || '';
+            document.getElementById('settings-phone').value = profile.phone || '';
+            document.getElementById('settings-cl-voice').value = profile.clVoice || DEFAULT_CL_VOICE;
+            document.getElementById('settings-cl-example').value = profile.clExample ?? DEFAULT_CL_EXAMPLE;
+            document.getElementById('settings-logo-preview').src = letterheadLogoSrc();
             const hasGoogle = !!getGoogleKey();
             const gStatus = document.getElementById('google-key-status');
             gStatus.textContent = hasGoogle ? 'Google key is saved — PDF extraction ready.' : 'No Google key set — resume PDF upload will not work.';
@@ -1308,8 +1366,8 @@
                 const diff = Math.ceil((new Date(m.date) - new Date()) / 86400000);
                 let label = diff === 0 ? 'Today' : diff === 1 ? 'Tomorrow' : diff < 0 ? 'Overdue' : `In ${diff}d`;
                 let cls = diff <= 0 ? 'bg-rose-100 text-rose-700' : diff === 1 ? 'bg-amber-100 text-amber-700' : 'bg-purple-50 text-purple-600';
-                return `<div onclick="openDetailsModal('${m.jobId}','tab-tasks')" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl cursor-pointer flex items-center justify-between transition">
-                    <div class="min-w-0 pr-2"><p class="text-xs font-bold text-slate-800 truncate">${m.title}</p><p class="text-[10px] text-slate-400 truncate">${m.jobCompany}</p></div>
+                return `<div onclick="openDetailsModal(${jsArg(m.jobId)},'tab-tasks')" class="p-3 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded-xl cursor-pointer flex items-center justify-between transition">
+                    <div class="min-w-0 pr-2"><p class="text-xs font-bold text-slate-800 truncate">${esc(m.title)}</p><p class="text-[10px] text-slate-400 truncate">${esc(m.jobCompany)}</p></div>
                     <span class="text-[9px] px-2 py-1 rounded-lg font-bold flex-shrink-0 ${cls}">${label}</span>
                 </div>`;
             }).join('');
@@ -1350,22 +1408,22 @@
         const sorted = [...jobs].sort((a,b) => new Date(b.date||0) - new Date(a.date||0)).slice(0,5);
         tbody.innerHTML = sorted.map(j => {
             const domain = j.url ? (() => { try { return new URL(j.url).hostname.replace('www.',''); } catch(e){ return ''; } })() : '';
-            const fav = domain ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="w-5 h-5 rounded-md flex-shrink-0 object-contain" onerror="this.style.display='none'" loading="lazy">` : `<span class="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 flex items-center justify-center text-[9px] font-black flex-shrink-0">${j.company[0].toUpperCase()}</span>`;
+            const fav = domain ? `<img src="https://www.google.com/s2/favicons?domain=${esc(domain)}&sz=32" class="w-5 h-5 rounded-md flex-shrink-0 object-contain" onerror="this.style.display='none'" loading="lazy">` : `<span class="w-5 h-5 rounded-lg bg-gradient-to-br from-purple-100 to-pink-100 text-purple-700 flex items-center justify-center text-[9px] font-black flex-shrink-0">${esc((j.company||'?')[0].toUpperCase())}</span>`;
             return `
             <tr class="border-b border-slate-50 hover:bg-purple-50/30 transition-colors group">
                 <td class="py-3.5 pr-4 font-bold text-slate-800">
                     <div class="flex items-center space-x-2.5">
                         ${fav}
-                        <span>${j.company}</span>
+                        <span>${esc(j.company)}</span>
                     </div>
                 </td>
-                <td class="py-3.5 pr-4 text-slate-600 font-medium text-xs">${j.title}</td>
-                <td class="py-3.5 pr-4 text-slate-400 hidden md:table-cell text-xs">${j.location||'Remote'}</td>
-                <td class="py-3.5 pr-4"><span class="pill-${j.status} text-[10px] font-bold px-2.5 py-1 rounded-full">${j.status.charAt(0).toUpperCase()+j.status.slice(1)}</span></td>
+                <td class="py-3.5 pr-4 text-slate-600 font-medium text-xs">${esc(j.title)}</td>
+                <td class="py-3.5 pr-4 text-slate-400 hidden md:table-cell text-xs">${esc(j.location||'Remote')}</td>
+                <td class="py-3.5 pr-4"><span class="pill-${esc(j.status)} text-[10px] font-bold px-2.5 py-1 rounded-full">${esc(j.status.charAt(0).toUpperCase()+j.status.slice(1))}</span></td>
                 <td class="py-3.5 text-right">
                     <div class="flex items-center justify-end space-x-3">
-                        <button onclick="openDetailsModal('${j.id}')" class="text-purple-600 hover:text-purple-800 font-bold text-xs hover:underline transition">Manage</button>
-                        <button onclick="quickDeleteJob('${j.id}', event)" class="text-slate-300 hover:text-rose-500 transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash-can text-xs"></i></button>
+                        <button onclick="openDetailsModal(${jsArg(j.id)})" class="text-purple-600 hover:text-purple-800 font-bold text-xs hover:underline transition">Manage</button>
+                        <button onclick="quickDeleteJob(${jsArg(j.id)}, event)" class="text-slate-300 hover:text-rose-500 transition opacity-0 group-hover:opacity-100"><i class="fa-solid fa-trash-can text-xs"></i></button>
                     </div>
                 </td>
             </tr>`;
@@ -1385,37 +1443,37 @@
             const done = (job.tasks||[]).filter(t=>t.done).length, total = (job.tasks||[]).length;
             const domain = job.url ? (() => { try { return new URL(job.url).hostname.replace('www.',''); } catch(e){ return ''; } })() : '';
             const faviconKanban = domain
-                ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="w-4 h-4 rounded object-contain flex-shrink-0" onerror="this.outerHTML='<span class=\'w-4 h-4 rounded bg-purple-100 text-purple-700 text-[8px] font-black flex items-center justify-center flex-shrink-0\'>${job.company[0].toUpperCase()}</span>'" loading="lazy">`
-                : `<span class="w-4 h-4 rounded bg-purple-100 text-purple-700 text-[8px] font-black flex items-center justify-center flex-shrink-0">${job.company[0].toUpperCase()}</span>`;
+                ? `<img src="https://www.google.com/s2/favicons?domain=${esc(domain)}&sz=32" class="w-4 h-4 rounded object-contain flex-shrink-0" onerror="this.style.display='none'" loading="lazy">`
+                : `<span class="w-4 h-4 rounded bg-purple-100 text-purple-700 text-[8px] font-black flex items-center justify-center flex-shrink-0">${esc((job.company||'?')[0].toUpperCase())}</span>`;
             const card = document.createElement('div');
             card.className = "job-card bg-white p-3.5 rounded-xl shadow-sm border border-slate-100 cursor-grab active:cursor-grabbing relative group";
             card.draggable = true;
             card.id = `card-${job.id}`;
-            card.setAttribute('ondragstart', `drag(event,'${job.id}')`);
-            card.setAttribute('onclick', `handleCardClick(event,'${job.id}')`);
+            card.setAttribute('ondragstart', `drag(event,${JSON.stringify(String(job.id))})`);
+            card.setAttribute('onclick', `handleCardClick(event,${JSON.stringify(String(job.id))})`);
             card.innerHTML = `
                 <div class="flex justify-between items-start gap-1">
                     <div class="min-w-0 flex items-start space-x-2">
                         ${faviconKanban}
                         <div class="min-w-0">
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">${job.company}</p>
-                            <h5 class="text-xs font-bold text-slate-800 leading-snug mt-0.5 group-hover:text-purple-700 transition-colors">${job.title}</h5>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest truncate">${esc(job.company)}</p>
+                            <h5 class="text-xs font-bold text-slate-800 leading-snug mt-0.5 group-hover:text-purple-700 transition-colors">${esc(job.title)}</h5>
                         </div>
                     </div>
                     <div class="relative flex-shrink-0">
-                        <button onclick="toggleCardMobileMenu(event,'${job.id}')" class="text-slate-300 hover:text-slate-500 p-1 rounded-lg focus:outline-none"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
-                        <div id="dropdown-${job.id}" class="hidden absolute right-0 mt-1 w-32 rounded-xl bg-white shadow-2xl border border-slate-100 py-1 z-30 text-[10px] font-semibold text-slate-600">
+                        <button onclick="toggleCardMobileMenu(event,${jsArg(job.id)})" class="text-slate-300 hover:text-slate-500 p-1 rounded-lg focus:outline-none"><i class="fa-solid fa-ellipsis-vertical text-xs"></i></button>
+                        <div id="dropdown-${esc(job.id)}" class="hidden absolute right-0 mt-1 w-32 rounded-xl bg-white shadow-2xl border border-slate-100 py-1 z-30 text-[10px] font-semibold text-slate-600">
                             <p class="text-[8px] uppercase tracking-wider text-slate-400 px-3 py-1">Move to</p>
-                            ${lanes.map(s=>`<button onclick="moveJobStatus(event,'${job.id}','${s}')" class="w-full text-left px-3 py-1.5 hover:bg-purple-50 hover:text-purple-700 transition">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
+                            ${lanes.map(s=>`<button onclick="moveJobStatus(event,${jsArg(job.id)},'${s}')" class="w-full text-left px-3 py-1.5 hover:bg-purple-50 hover:text-purple-700 transition">${s.charAt(0).toUpperCase()+s.slice(1)}</button>`).join('')}
                             <div class="border-t border-slate-100 mt-1 pt-1">
-                                <button onclick="quickDeleteJob('${job.id}', event)" class="w-full text-left px-3 py-1.5 hover:bg-rose-50 hover:text-rose-600 text-rose-400 transition flex items-center space-x-1.5"><i class="fa-solid fa-trash-can text-[9px]"></i><span>Delete</span></button>
+                                <button onclick="quickDeleteJob(${jsArg(job.id)}, event)" class="w-full text-left px-3 py-1.5 hover:bg-rose-50 hover:text-rose-600 text-rose-400 transition flex items-center space-x-1.5"><i class="fa-solid fa-trash-can text-[9px]"></i><span>Delete</span></button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="mt-2.5 flex items-center justify-between text-[10px] text-slate-400 font-medium">
-                    <span><i class="fa-solid fa-location-dot mr-1"></i>${job.workMode}</span>
-                    ${job.salary ? `<span class="text-slate-600 font-semibold">${job.salary.split('–')[0]}+</span>` : ''}
+                    <span><i class="fa-solid fa-location-dot mr-1"></i>${esc(job.workMode)}</span>
+                    ${job.salary ? `<span class="text-slate-600 font-semibold">${esc(String(job.salary).split('–')[0])}+</span>` : ''}
                 </div>
                 ${total > 0 ? `<div class="mt-2 flex items-center space-x-1 text-[10px] text-slate-400"><i class="fa-solid fa-list-check text-[9px]"></i><span>${done}/${total}</span></div>` : ''}
             `;
@@ -1460,29 +1518,29 @@
         if (!list.length) { tbody.innerHTML = `<tr><td colspan="6" class="text-center py-10 text-slate-400 text-xs">No results.</td></tr>`; return; }
         tbody.innerHTML = list.map(j => {
             const domain = j.url ? (() => { try { return new URL(j.url).hostname.replace('www.',''); } catch(e){ return ''; } })() : '';
-            const favicon = domain ? `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="w-5 h-5 rounded-md flex-shrink-0 object-contain" onerror="this.style.display='none'" loading="lazy">` : `<span class="w-5 h-5 rounded-md bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center text-purple-700 text-[9px] font-black flex-shrink-0">${j.company[0].toUpperCase()}</span>`;
+            const favicon = domain ? `<img src="https://www.google.com/s2/favicons?domain=${esc(domain)}&sz=32" class="w-5 h-5 rounded-md flex-shrink-0 object-contain" onerror="this.style.display='none'" loading="lazy">` : `<span class="w-5 h-5 rounded-md bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center text-purple-700 text-[9px] font-black flex-shrink-0">${esc((j.company||'?')[0].toUpperCase())}</span>`;
             return `
             <tr class="border-b border-slate-50 hover:bg-purple-50/20 transition-colors group">
                 <td class="py-3 px-5 font-bold text-slate-800">
                     <div class="flex items-center space-x-2.5">
                         ${favicon}
                         <div>
-                            <span class="block">${j.company}</span>
-                            ${j.url ? `<a href="${j.url}" target="_blank" class="text-[10px] text-slate-400 hover:text-purple-600 flex items-center mt-0.5 font-medium">View listing <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[8px]"></i></a>` : ''}
+                            <span class="block">${esc(j.company)}</span>
+                            ${safeUrl(j.url) ? `<a href="${esc(safeUrl(j.url))}" target="_blank" class="text-[10px] text-slate-400 hover:text-purple-600 flex items-center mt-0.5 font-medium">View listing <i class="fa-solid fa-arrow-up-right-from-square ml-1 text-[8px]"></i></a>` : ''}
                         </div>
                     </div>
                 </td>
-                <td class="py-3 px-5 font-semibold text-slate-600 text-xs">${j.title}</td>
+                <td class="py-3 px-5 font-semibold text-slate-600 text-xs">${esc(j.title)}</td>
                 <td class="py-3 px-5 text-slate-500 text-xs">
-                    <span class="font-semibold text-slate-700">${j.workMode}</span>
-                    <span class="block text-[10px] text-slate-400">${j.location||'—'}</span>
+                    <span class="font-semibold text-slate-700">${esc(j.workMode)}</span>
+                    <span class="block text-[10px] text-slate-400">${esc(j.location||'—')}</span>
                 </td>
-                <td class="py-3 px-5"><span class="pill-${j.status} text-[10px] font-bold px-2.5 py-1 rounded-full">${j.status.charAt(0).toUpperCase()+j.status.slice(1)}</span></td>
-                <td class="py-3 px-5 text-slate-400 text-xs">${j.date||'—'}</td>
+                <td class="py-3 px-5"><span class="pill-${esc(j.status)} text-[10px] font-bold px-2.5 py-1 rounded-full">${esc(j.status.charAt(0).toUpperCase()+j.status.slice(1))}</span></td>
+                <td class="py-3 px-5 text-slate-400 text-xs">${esc(j.date||'—')}</td>
                 <td class="py-3 px-5 text-right">
                     <div class="flex items-center justify-end space-x-3">
-                        <button onclick="openDetailsModal('${j.id}')" class="text-purple-600 hover:text-purple-800 font-bold text-xs transition hover:underline">Manage</button>
-                        <button onclick="quickDeleteJob('${j.id}', event)" title="Delete" class="text-slate-300 hover:text-rose-500 transition opacity-0 group-hover:opacity-100">
+                        <button onclick="openDetailsModal(${jsArg(j.id)})" class="text-purple-600 hover:text-purple-800 font-bold text-xs transition hover:underline">Manage</button>
+                        <button onclick="quickDeleteJob(${jsArg(j.id)}, event)" title="Delete" class="text-slate-300 hover:text-rose-500 transition opacity-0 group-hover:opacity-100">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
@@ -1654,7 +1712,7 @@ REQUIREMENTS:
         const j = jobs.find(x => x.id === id);
         if (!j) return;
         document.getElementById('details-role-title').textContent = j.title;
-        document.getElementById('details-company-name').innerHTML = `<i class="fa-solid fa-building mr-1.5 text-xs"></i>${j.company}`;
+        document.getElementById('details-company-name').innerHTML = `<i class="fa-solid fa-building mr-1.5 text-xs"></i>${esc(j.company)}`;
         document.getElementById('details-mode-badge').textContent = j.workMode || 'Remote';
 
         const sb = document.getElementById('details-status-badge');
@@ -1667,7 +1725,7 @@ REQUIREMENTS:
         document.getElementById('details-description-text').textContent = j.description || 'No notes yet. Click Edit to add.';
 
         const lp = document.getElementById('details-link-panel');
-        if (j.url) { lp.classList.remove('hidden'); document.getElementById('details-url-btn').href = j.url; } else { lp.classList.add('hidden'); }
+        if (safeUrl(j.url)) { lp.classList.remove('hidden'); document.getElementById('details-url-btn').href = safeUrl(j.url); } else { lp.classList.add('hidden'); }
 
         document.getElementById('badge-tab-tasks').textContent = (j.tasks||[]).length;
         document.getElementById('badge-tab-contacts').textContent = (j.contacts||[]).length;
@@ -1690,14 +1748,14 @@ REQUIREMENTS:
         if (!j.tasks?.length) { c.innerHTML = `<div class="text-center py-8 text-slate-400 text-xs"><i class="fa-solid fa-list text-slate-300 text-lg mb-1 block"></i>No milestones yet.</div>`; return; }
         c.innerHTML = j.tasks.map(t => `
             <div class="p-3 bg-slate-50 hover:bg-slate-100 rounded-xl flex items-center justify-between border border-slate-100 transition">
-                <div class="flex items-center space-x-3 flex-1 cursor-pointer min-w-0" onclick="toggleTaskCompletion('${j.id}','${t.id}')">
+                <div class="flex items-center space-x-3 flex-1 cursor-pointer min-w-0" onclick="toggleTaskCompletion(${jsArg(j.id)},${jsArg(t.id)})">
                     <i class="${t.done ? 'fa-solid fa-square-check text-purple-500' : 'fa-regular fa-square text-slate-300'} flex-shrink-0"></i>
                     <div class="min-w-0">
-                        <span class="text-xs ${t.done ? 'line-through text-slate-400' : 'font-semibold text-slate-700'} block truncate">${t.title}</span>
-                        ${t.date ? `<span class="text-[9px] text-slate-400"><i class="fa-solid fa-calendar text-[8px] mr-1"></i>${t.date}</span>` : ''}
+                        <span class="text-xs ${t.done ? 'line-through text-slate-400' : 'font-semibold text-slate-700'} block truncate">${esc(t.title)}</span>
+                        ${t.date ? `<span class="text-[9px] text-slate-400"><i class="fa-solid fa-calendar text-[8px] mr-1"></i>${esc(t.date)}</span>` : ''}
                     </div>
                 </div>
-                <button onclick="deleteTaskFromJob('${j.id}','${t.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 flex-shrink-0"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                <button onclick="deleteTaskFromJob(${jsArg(j.id)},${jsArg(t.id)})" class="text-slate-300 hover:text-rose-500 p-1.5 flex-shrink-0"><i class="fa-regular fa-trash-can text-xs"></i></button>
             </div>
         `).join('');
     }
@@ -1730,14 +1788,14 @@ REQUIREMENTS:
         if (!j.contacts?.length) { c.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs col-span-2"><i class="fa-solid fa-address-book text-slate-300 text-lg mb-1 block"></i>No contacts logged.</div>`; return; }
         c.innerHTML = j.contacts.map(ct => `
             <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-100 hover:border-purple-200 transition relative">
-                <button onclick="deleteContactFromJob('${j.id}','${ct.name}')" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500"><i class="fa-regular fa-trash-can text-xs"></i></button>
-                <h5 class="text-xs font-bold text-slate-800">${ct.name}</h5>
-                ${ct.role ? `<p class="text-[10px] text-slate-400">${ct.role}</p>` : ''}
+                <button onclick="deleteContactFromJob(${jsArg(j.id)},${jsArg(ct.name)})" class="absolute top-2 right-2 text-slate-300 hover:text-rose-500"><i class="fa-regular fa-trash-can text-xs"></i></button>
+                <h5 class="text-xs font-bold text-slate-800">${esc(ct.name)}</h5>
+                ${ct.role ? `<p class="text-[10px] text-slate-400">${esc(ct.role)}</p>` : ''}
                 <div class="mt-2 space-y-1 text-[10px] text-slate-500">
-                    ${ct.email ? `<a href="mailto:${ct.email}" class="hover:text-purple-600 block"><i class="fa-solid fa-envelope mr-1"></i>${ct.email}</a>` : ''}
-                    ${ct.linkedin ? `<a href="${ct.linkedin}" target="_blank" class="hover:text-purple-600 block"><i class="fa-brands fa-linkedin mr-1"></i>LinkedIn</a>` : ''}
+                    ${ct.email ? `<a href="mailto:${esc(ct.email)}" class="hover:text-purple-600 block"><i class="fa-solid fa-envelope mr-1"></i>${esc(ct.email)}</a>` : ''}
+                    ${safeUrl(ct.linkedin) ? `<a href="${esc(safeUrl(ct.linkedin))}" target="_blank" class="hover:text-purple-600 block"><i class="fa-brands fa-linkedin mr-1"></i>LinkedIn</a>` : ''}
                 </div>
-                ${ct.notes ? `<p class="text-[10px] text-slate-400 italic mt-2 border-t border-slate-100 pt-2">${ct.notes}</p>` : ''}
+                ${ct.notes ? `<p class="text-[10px] text-slate-400 italic mt-2 border-t border-slate-100 pt-2">${esc(ct.notes)}</p>` : ''}
             </div>
         `).join('');
     }
@@ -1790,7 +1848,10 @@ REQUIREMENTS:
 
     // ─── SETTINGS ─────────────────────────────────────────────────────────────
     function saveProfileFromSettings() {
+        // Keep fields saved elsewhere (cover letter voice, logo) when saving the profile
         const p = {
+            ...profile,
+            phone: document.getElementById('settings-phone').value.trim(),
             name: document.getElementById('settings-name').value.trim(),
             email: document.getElementById('settings-email').value.trim(),
             location: document.getElementById('settings-location').value.trim(),
@@ -2111,7 +2172,21 @@ REQUIREMENTS:
         } catch (e) { showToast(e.message || 'Recovery failed', 'error'); }
     }
 
+    function updateMobileBackupAlert() {
+        const el = document.getElementById('backup-alert-mobile');
+        if (!el) return;
+        const error = localStorage.getItem('careerpath_sync_error');
+        const notConnected = !getGithubToken();
+        el.classList.toggle('hidden', !error && !notConnected);
+        el.classList.toggle('bg-rose-100', !!error);
+        el.classList.toggle('text-rose-700', !!error);
+        el.classList.toggle('bg-amber-100', !error && notConnected);
+        el.classList.toggle('text-amber-800', !error && notConnected);
+        el.textContent = error ? `⚠ ${error}` : '⚠ Data not backed up. Tap to set up cloud backup.';
+    }
+
     function updateSyncBadge() {
+        updateMobileBackupAlert();
         const ts = localStorage.getItem('careerpath_last_sync');
         const el = document.getElementById('sync-status');
         if (!el) return;
@@ -2235,12 +2310,200 @@ REQUIREMENTS:
         preview.classList.remove('hidden');
     }
 
+    // ─── COVER LETTER VOICE (editable in Settings) ────────────────────────────
+    const DEFAULT_CL_VOICE = `You are a cover letter writer for Ana Maria Posada, a multidisciplinary designer and developer based in Vancouver.
+
+Your most important job is to make every cover letter sound like Ana wrote it herself, not like AI.
+
+ANA'S WRITING VOICE
+
+Ana writes in a warm, direct, conversational, confident way. She is professional, but she does not sound corporate, overly polished, academic, or formal.
+
+Her writing should feel like a real creative person talking to another person.
+
+She often:
+- Starts with a genuine reason the role or company caught her attention.
+- Explains her experience through specific examples rather than generic claims.
+- Connects different parts of her background naturally: UI/UX, product design, branding, web design and development.
+- Shows curiosity and excitement without sounding exaggerated.
+- Uses simple, natural English.
+- Sounds confident about what she can do without overselling herself.
+- Mentions that she likes taking ideas from concept to launch when relevant.
+- Shows her builder mindset: she doesn't only design things; she understands how they are implemented.
+- Lets some personality come through.
+
+AVOID AI-SOUNDING LANGUAGE
+
+Never use phrases like:
+- "I am thrilled to apply"
+- "I am eager to contribute"
+- "immediately captivated me"
+- "honed over X years"
+- "further underscores my capabilities"
+- "I am confident that..."
+- "I would be an invaluable asset"
+- "aligns perfectly with"
+- "unique blend of"
+- "leveraging my expertise"
+- "meticulously"
+- "dynamic professional"
+- "proven track record"
+
+Avoid unnecessary adjectives and exaggerated praise.
+
+Do not simply repeat the job description using different words.
+
+Do not invent experience Ana doesn't have.
+
+WRITING STYLE
+
+Prefer:
+"I've been..."
+"I love..."
+"What caught my attention..."
+"For the past four years..."
+"One thing I really enjoy..."
+"I've had the chance to..."
+"I'd love to bring..."
+"This role stood out to me because..."
+
+Keep sentences relatively short and varied.
+
+It is okay for the writing to feel slightly informal when appropriate. Natural is more important than sounding impressive.
+
+Use concrete examples whenever possible.
+
+Ana has around 7 years of professional design experience and works across product design, UI/UX, branding, web design and development.
+
+When relevant, highlight:
+- Founder of AniDesignIt
+- Sole designer for GHG Accounting's software for approximately four years
+- Experience creating design systems
+- Figma
+- Adobe Creative Cloud
+- Web design and development
+- Experience taking projects from concept through launch
+- Electronic Arts experience
+- IBM campaign work
+- Experience working independently with clients
+- Builder mindset and ability to understand implementation
+
+Never claim proficiency with a tool simply because it appears in the job description. If Ana has related experience but not direct experience, frame her as adaptable and able to learn it.
+
+The finished cover letter should sound human enough that Ana could comfortably read it aloud and feel that it sounds like her.`;
+
+    const DEFAULT_CL_EXAMPLE = `Dear Pyrrha team,
+
+What first caught my attention about this role was the combination of design, storytelling and eCommerce. I love when design goes beyond making something look beautiful and actually carries meaning, and that's something I really connect with in Pyrrha's work.
+
+I'm a multidisciplinary designer and developer based in Vancouver with around seven years of experience across UI/UX, branding, web and digital design. I also run my own studio, AniDesignIt, where I work with small businesses from the first idea all the way to launch. That means I'm often designing the brand and website in Figma, building it, setting up forms, analytics and integrations, and making sure the final experience works as well as it looks.
+
+For the past four years, I've also been the sole designer behind GHG Accounting's carbon accounting platform. I've created and maintained its design system, designed complex product experiences, and worked across the company's website, marketing materials and digital assets. Working as the only designer has made me comfortable switching between big-picture thinking and the small details that keep a brand consistent.
+
+My background is a little broader than a traditional graphic design role, and that's actually what excites me about this position. I understand both the visual side of a brand and what happens behind the screen, and I love being able to bring those two worlds together.
+
+I'd love the opportunity to bring that experience to Pyrrha and help create thoughtful, beautiful experiences around a brand that already has such a strong story.
+
+Warmly,
+
+Ana Maria Posada`;
+
+    const CL_AVOID_STYLE = `NEGATIVE EXAMPLE — writing Ana does NOT want:
+- too corporate
+- sounds AI-generated
+- too many adjectives
+- exaggerated enthusiasm
+- unnecessarily complex vocabulary
+- generic claims instead of specific examples
+- sentences that are too long
+- doesn't sound like Ana speaking naturally
+Never write in that style.`;
+
     const TONE_INSTRUCTIONS = {
-        professional: "Write in a polished, professional tone — confident and direct. Avoid overly casual language.",
-        warm: "Write in a warm, personable tone that feels human and genuine. Show authentic enthusiasm for the company mission.",
-        creative: "Write in a bold, creative tone that reflects a designer's voice — unexpected metaphors welcome, show personality and wit.",
-        concise: "Write in a sharp, concise style. Three tight paragraphs maximum. No filler. Every sentence earns its place."
+        professional: `TONE: Professional
+Keep the natural voice, just a little more structured — good for larger or more corporate companies.
+Open with a clear, genuine reason this role stood out.
+Pick 2–3 concrete experiences that match the job.
+No corporate jargon. End simply.
+Target length: 280–350 words.`,
+        warm: `TONE: Warm & Personal
+This is the closest to the writer's everyday voice — like the example letter.
+Open with a genuine, personal reason the company or role caught her attention.
+Let her care for the people and the work come through, with specific examples.
+Warm, but not sentimental. End with a simple, friendly close.
+Target length: 300–380 words.`,
+        creative: `TONE: Creative
+Make this version more expressive and personal than a traditional cover letter.
+Open with an interesting, genuine observation about the company or role.
+Allow Ana's personality and curiosity to come through.
+Do not become poetic or cheesy.
+Keep it professional enough for a job application.
+Target length: 300–400 words.`,
+        concise: `TONE: Short & Sharp
+Write a concise cover letter of approximately 200–250 words.
+Do not summarize Ana's entire resume.
+Choose only the 2–3 experiences most relevant to this job.
+Use short paragraphs.
+Get to the point quickly.
+Keep the opening personal and the ending simple.`
     };
+
+    // The AniDesignIt mark, used on the letterhead unless another logo is uploaded
+    const DEFAULT_LETTERHEAD_LOGO = 'data:image/svg+xml;utf8,' + encodeURIComponent(`<svg width="71" height="63" viewBox="0 0 71 63" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="4" width="47" height="41" stroke="#FF725E" stroke-linejoin="round"/><rect x="0.5" y="39.5" width="7.07343" height="7.45789" fill="white" stroke="#FF725E"/><rect x="0.5" y="0.5" width="7.07343" height="7.45789" fill="white" stroke="#FF725E"/><rect x="47.5" y="0.5" width="7.07343" height="7.45789" fill="white" stroke="#FF725E"/><rect x="47.5" y="41.5" width="7.07343" height="7.45789" fill="white" stroke="#FF725E"/><path d="M51 44.9758L59.5455 62.1185L61.1129 53.2695L68.0829 48.9671L51 44.9758Z" fill="#263238"/><path d="M10 41.8316V39.5033L11.8798 39.1707C12.4582 39.044 12.9241 38.8222 13.2776 38.5054C13.631 38.157 13.9684 37.5076 14.2898 36.5573L24.4599 8H31.3043L41.5226 36.6523C41.8439 37.5709 42.1331 38.1887 42.3902 38.5054C42.6794 38.8222 43.1774 39.044 43.8844 39.1707L45.5232 39.5033V41.8316H29.9065V39.5033L32.0754 39.2182C32.7181 39.1231 33.1037 38.9014 33.2322 38.5529C33.3608 38.1728 33.3126 37.571 33.0876 36.7473L31.2561 31.0929H19.6881L17.8565 36.5573C17.5995 37.3175 17.5352 37.9352 17.6637 38.4104C17.7923 38.8539 18.2743 39.139 19.1097 39.2657L21.3751 39.5508V41.8316H10ZM20.6039 28.432H30.4367L25.7613 13.6544H25.5685L20.6039 28.432Z" fill="#3F4142"/></svg>`);
+
+    function letterheadLogoSrc() {
+        const custom = profile.letterheadLogo || '';
+        return /^data:image\/(png|jpeg|svg\+xml)[;,]/.test(custom) ? custom : DEFAULT_LETTERHEAD_LOGO;
+    }
+
+    function resetCLField(which) {
+        if (which === 'voice') document.getElementById('settings-cl-voice').value = DEFAULT_CL_VOICE;
+        else document.getElementById('settings-cl-example').value = DEFAULT_CL_EXAMPLE;
+        showToast('Default restored — click Save to keep it.');
+    }
+
+    function saveCoverLetterSettings() {
+        const voice = document.getElementById('settings-cl-voice').value.trim();
+        const example = document.getElementById('settings-cl-example').value.trim();
+        const p = { ...profile };
+        // Store only what differs from the defaults so future default updates still apply
+        if (voice && voice !== DEFAULT_CL_VOICE) p.clVoice = voice; else delete p.clVoice;
+        if (example !== DEFAULT_CL_EXAMPLE) p.clExample = example; else delete p.clExample;
+        saveProfile(p);
+        showToast('Cover letter settings saved!');
+    }
+
+    function uploadLetterheadLogo(file) {
+        if (!file) return;
+        if (!/^image\/(png|jpeg|svg\+xml)$/.test(file.type)) { showToast('Use a PNG, JPG or SVG logo', 'error'); return; }
+        if (file.size > 300 * 1024) { showToast('Logo is too big — keep it under 300 KB', 'error'); return; }
+        const reader = new FileReader();
+        reader.onload = () => {
+            saveProfile({ ...profile, letterheadLogo: reader.result });
+            document.getElementById('settings-logo-preview').src = letterheadLogoSrc();
+            showToast('Logo saved!');
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function resetLetterheadLogo() {
+        const p = { ...profile };
+        delete p.letterheadLogo;
+        saveProfile(p);
+        document.getElementById('settings-logo-preview').src = letterheadLogoSrc();
+        showToast('Using the AniDesignIt logo.');
+    }
+
+    // Gemini sometimes adds markdown; the letter should be plain text
+    function cleanLetterText(text) {
+        return String(text || '')
+            .replace(/^```[a-z]*\n?|\n?```$/g, '')
+            .replace(/\*\*(.+?)\*\*/g, '$1')
+            .replace(/(^|\s)\*(\S.+?\S)\*(?=\s|$)/g, '$1$2')
+            .replace(/^#+\s*/gm, '')
+            .replace(/\n{3,}/g, '\n\n')
+            .trim();
+    }
 
     async function generateCoverLetter() {
         const jobId = document.getElementById('cl-job-select').value;
@@ -2279,31 +2542,43 @@ REQUIREMENTS:
         const userEmail = profile.email || '';
         const userPortfolio = profile.portfolioUrl || '';
 
-        const prompt = `You are a professional cover letter writer helping ${userName}, a ${userTitle}${userLocation ? ` based in ${userLocation}` : ''}.${userEmail ? ` Email: ${userEmail}.` : ''}${userPortfolio ? ` Portfolio: ${userPortfolio}.` : ''}
+        const voice = profile.clVoice || DEFAULT_CL_VOICE;
+        const example = (profile.clExample ?? DEFAULT_CL_EXAMPLE).trim();
 
-They are applying for this role:
-- Company: ${job.company}
-- Title: ${job.title}
-- Work mode: ${job.workMode}, Location: ${job.location}
-- Salary: ${job.salary || 'not specified'}
-- Job description: ${job.description || 'Not provided'}
+        const prompt = `${voice}
 
-Their resume:
+${TONE_INSTRUCTIONS[selectedTone]}
+
+${CL_AVOID_STYLE}
+${example ? `
+EXAMPLE REFERENCE — a real letter that sounds like the writer. Match its voice, rhythm and simplicity. Do not copy its sentences, company details or structure word for word.
+"""
+${example}
+"""
+` : ''}
+ABOUT THE APPLICANT
+Name: ${userName}${userTitle ? `\nTitle: ${userTitle}` : ''}${userLocation ? `\nLocation: ${userLocation}` : ''}${userPortfolio ? `\nPortfolio: ${userPortfolio}` : ''}
+
+Resume (the only source of facts about her experience, together with the highlights above):
+"""
 ${(profile.resumeText || '').slice(0, 8000)}
+"""
 
-Tone instruction: ${TONE_INSTRUCTIONS[selectedTone]}
-
-${extra ? `Additional context from the applicant: ${extra}` : ''}
-
-Write a compelling, tailored cover letter. It should:
-- Open with a strong, memorable hook (not "I am writing to apply for...")
-- Show genuine understanding of what the company does and why ${userName.split(' ')[0] || 'the applicant'} is excited
-- Connect 2-3 specific skills/experiences from the resume to the job requirements
-- Close with confidence and a clear call to action
-- Be addressed "Dear Hiring Team," and signed "${userName}"
-- Sound like a real human wrote it, not a template
-
-Do NOT include a subject line or email header. Output only the letter body, starting with the salutation.`;
+THE ROLE
+Company: ${job.company}
+Title: ${job.title}
+Work mode: ${job.workMode || 'not specified'}, Location: ${job.location || 'not specified'}
+Job description:
+"""
+${(job.description || 'Not provided').slice(0, 8000)}
+"""
+${extra ? `\nExtra context from ${userName.split(' ')[0] || 'the applicant'} (use it if it helps): ${extra}\n` : ''}
+OUTPUT
+- Start with "Dear ${job.company} team," (or the hiring manager's name if the job description gives it).
+- End with a short sign-off line if it fits the tone, then "${userName}" on its own line.
+- Plain text only: no markdown, no bold, no bullet points, no subject line, no date, no address or contact header.
+- Separate paragraphs with one blank line.
+- Output only the letter.`;
 
         if (!getGoogleKey()) {
             clearInterval(msgInterval);
@@ -2319,8 +2594,9 @@ Do NOT include a subject line or email header. Output only the letter body, star
 
             document.getElementById('cl-loading').classList.add('hidden');
             document.getElementById('cl-result').classList.remove('hidden');
-            document.getElementById('cl-output').textContent = text;
-            document.getElementById('cl-result-badge').textContent = selectedTone;
+            document.getElementById('cl-output').value = cleanLetterText(text);
+            clCurrentJob = job;
+            document.getElementById('cl-result-badge').textContent = { professional: 'Professional', warm: 'Warm & Personal', creative: 'Creative', concise: 'Short & Sharp' }[selectedTone];
             document.getElementById('cl-result-job').textContent = `${job.company} — ${job.title}`;
             showToast("Cover letter ready!");
 
@@ -2333,12 +2609,77 @@ Do NOT include a subject line or email header. Output only the letter body, star
     }
 
     function copyCoverLetter() {
-        const text = document.getElementById('cl-output').textContent;
+        const text = document.getElementById('cl-output').value;
         navigator.clipboard.writeText(text).then(() => {
             document.getElementById('copy-btn-text').textContent = 'Copied!';
             setTimeout(() => document.getElementById('copy-btn-text').textContent = 'Copy', 2000);
             showToast("Copied to clipboard!");
         });
+    }
+
+    let clCurrentJob = null;
+
+    // Builds the letter on the AniDesignIt letterhead: bold date on top, contact footer and logo on every page
+    function buildLetterheadHTML(text, job) {
+        const name = profile.name || '';
+        const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+        const paragraphs = text.split(/\n\s*\n/).map(p => `<p>${esc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
+        const site = safeUrl(profile.portfolioUrl);
+        const items = [];
+        if (profile.location) items.push(esc(profile.location));
+        if (profile.email) items.push(`<a href="mailto:${esc(profile.email)}">${esc(profile.email)}</a>`);
+        if (profile.phone) items.push(esc(profile.phone));
+        if (site) items.push(`<a href="${esc(site)}">${esc(site.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, ''))}</a>`);
+        const footer = items.join('<span class="sep">|</span>');
+        const title = ['Cover Letter', job?.company, name].filter(Boolean).join(' - ');
+        return `<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Lato:wght@400&display=swap" rel="stylesheet">
+<style>
+@page { size: letter; margin: 0.75in 0.85in 0.55in; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; }
+body { font-family: Roboto, Arial, sans-serif; font-size: 11pt; line-height: 1.5; color: #1f1f1f; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+table.page { width: 100%; border-collapse: collapse; }
+table.page td { padding: 0; vertical-align: top; }
+.date { font-weight: 700; font-size: 12.5pt; margin: 0 0 14pt; }
+p { margin: 0 0 11pt; }
+.footer-space { height: 1.15in; }
+.footer { position: fixed; left: 0; right: 0; bottom: 0; height: 0.75in; display: flex; align-items: center; justify-content: space-between; font-family: Lato, Arial, sans-serif; font-size: 10.5pt; color: #263238; }
+.footer a { color: #263238; text-decoration: underline; }
+.footer .sep { color: #FF725E; margin: 0 7pt; }
+.footer img { height: 0.55in; width: auto; }
+@media screen { body { max-width: 8.5in; margin: 0 auto; padding: 0.75in 0.85in; } .footer { position: static; margin-top: 0.5in; } .footer-space { display: none; } }
+</style></head><body>
+<table class="page"><tbody><tr><td>
+<p class="date">${esc(date)}</p>
+${paragraphs}
+</td></tr></tbody><tfoot><tr><td><div class="footer-space"></div></td></tr></tfoot></table>
+<div class="footer"><div>${footer}</div><img src="${esc(letterheadLogoSrc())}" alt=""></div>
+</body></html>`;
+    }
+
+    async function downloadCoverLetter() {
+        const text = document.getElementById('cl-output').value.trim();
+        if (!text) { showToast('Generate or write a letter first', 'error'); return; }
+        const html = buildLetterheadHTML(text, clCurrentJob);
+        document.getElementById('cl-print-frame')?.remove();
+        const frame = document.createElement('iframe');
+        frame.id = 'cl-print-frame';
+        frame.setAttribute('aria-hidden', 'true');
+        frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+        document.body.appendChild(frame);
+        const doc = frame.contentDocument;
+        doc.open(); doc.write(html); doc.close();
+        // Wait for the logo and font stylesheet, but never more than 1.5s
+        await new Promise(r => { frame.contentWindow.addEventListener('load', r, { once: true }); setTimeout(r, 1500); });
+        try { await Promise.race([doc.fonts.ready, new Promise(r => setTimeout(r, 2000))]); } catch {}
+        // The print dialog's "Save as PDF" uses the page title as the file name
+        const pageTitle = document.title;
+        document.title = doc.title;
+        showToast('Choose "Save as PDF" in the print window');
+        frame.contentWindow.focus();
+        frame.contentWindow.print();
+        setTimeout(() => { document.title = pageTitle; }, 1000);
     }
 
     // ─── AI PARSE JOB MODAL ───────────────────────────────────────────────────
@@ -2400,7 +2741,7 @@ Do NOT include a subject line or email header. Output only the letter body, star
         if (finalUrl) {
             try {
                 const domain = new URL(finalUrl).hostname.replace('www.','');
-                faviconContainer.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${domain}&sz=32" class="w-6 h-6 rounded-md" onerror="this.style.display='none'" loading="lazy">`;
+                faviconContainer.innerHTML = `<img src="https://www.google.com/s2/favicons?domain=${esc(domain)}&sz=32" class="w-6 h-6 rounded-md" onerror="this.style.display='none'" loading="lazy">`;
             } catch(e) { faviconContainer.innerHTML = ''; }
         } else { faviconContainer.innerHTML = ''; }
 
@@ -2424,9 +2765,9 @@ Do NOT include a subject line or email header. Output only the letter body, star
             const fetchRes = await fetch(proxyUrl);
             const fetchData = await fetchRes.json();
             // Strip HTML tags — keep text content only
-            const tmp = document.createElement('div');
-            tmp.innerHTML = fetchData.contents || '';
-            pageText = tmp.innerText || tmp.textContent || '';
+            const fetchedDoc = new DOMParser().parseFromString(fetchData.contents || '', 'text/html');
+            fetchedDoc.querySelectorAll('script,style,noscript,template').forEach(el => el.remove());
+            pageText = fetchedDoc.body.textContent || '';
             pageText = pageText.replace(/\s+/g, ' ').slice(0, 4000);
         } catch(e) {
             // If proxy fails, tell Claude to use just the URL domain info
